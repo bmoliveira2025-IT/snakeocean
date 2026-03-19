@@ -16,7 +16,7 @@ const httpServer = createServer((req, res) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:3000', 'http://168.138.140.88:3000'],
+    origin: '*',
     methods: ['GET', 'POST']
   },
   // Otimizações de performance

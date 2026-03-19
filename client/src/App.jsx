@@ -1652,8 +1652,10 @@ export default function App() {
 
   // --- NOVO: Conexão Socket.io para Multijogador ---
   useEffect(() => {
-    // Conecta ao servidor (ajuste a URL conforme fornecido pelo usuário)
-    const socketUrl = process.env.NODE_ENV === 'production' ? 'http://168.138.140.88:3001' : 'http://localhost:3001';
+    // Conecta ao servidor (usa o mesmo domínio da página, mas na porta 3001)
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? `http://${window.location.hostname}:3001` 
+      : 'http://localhost:3001';
     const socket = io(socketUrl);
     state.current.socket = socket;
 
