@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 // ==========================================
 // CONSTANTS & CONFIG
 // ==========================================
-const WORLD_CENTER = 20000; // Ponto central do universo gigante para permitir mapas colossais
+const WORLD_CENTER = 3000; // Alinhado com o servidor (0 a 6000)
 const BASE_SPEED = 140; 
 const BOOST_SPEED = 450;
 const TURN_SPEED = 4.0;
@@ -1663,7 +1663,8 @@ export default function App() {
 
     socket.on('joined', ({ playerId, orbs, worldSize }) => {
       state.current.playerId = playerId;
-      state.current.worldRadius = worldSize;
+      // No servidor, o mundo é 0-6000. No cliente, centralizamos em 3000.
+      state.current.worldRadius = worldSize / 2;
       
       // Carregar orbs iniciais do servidor
       state.current.orbs = orbs.map(o => new Orb(o.x, o.y, o.isPowerup, o.type, o.color));
