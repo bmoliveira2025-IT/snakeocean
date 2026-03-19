@@ -1942,6 +1942,12 @@ export default function App() {
     // Reativa movimentação interativa da comida (bobbing local)
     s.orbs.forEach(orb => orb.update(dt, s.worldRadius));
 
+    // Atualiza partículas locais (efeitos visuais)
+    for (let i = s.particles.length - 1; i >= 0; i--) {
+      s.particles[i].update(dt);
+      if (s.particles[i].life <= 0) s.particles.splice(i, 1);
+    }
+
     // A lógica de orbs e cobras agora vem do servidor via socket.on('state')
     // Apenas atualizamos a câmera para seguir o jogador local
     if (s.player && !s.player.dead) {
