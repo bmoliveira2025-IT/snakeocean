@@ -74,6 +74,7 @@ class Snake {
     this.isBoosting = false;
     this.boostEnergy = 100;
     this.sessionCoins = 0;
+    this.skinType = 'cyclops'; // Valor padrão, pode ser atualizado no join
 
     // Build initial body
     this.body = [];
@@ -125,13 +126,20 @@ class Snake {
     this.x += Math.cos(this.angle) * speed * dt;
     this.y += Math.sin(this.angle) * speed * dt;
 
-    // Wall
-    if (this.x < 0 || this.x > WORLD_SIZE || this.y < 0 || this.y > WORLD_SIZE) {
+    // Boundary check (circular)
+    const dx = this.x - WORLD_CENTER_COORD;
+    const dy = this.y - WORLD_CENTER_COORD;
+    const distToCenter = Math.sqrt(dx*dx + dy*dy);
+    const radiusLimit = WORLD_SIZE_BASE / 2; // Use WORLD_SIZE_BASE for the radius
+
+    if (distToCenter > radiusLimit) {
       if (this.spawnProtection > 0) {
-        this.x = Math.max(0, Math.min(this.x, WORLD_SIZE));
-        this.y = Math.max(0, Math.min(this.y, WORLD_SIZE));
-        this.angle += Math.PI;
-        this.targetAngle = this.angle;
+        // If protected, push back towards center
+        const angleToCenter = Math.atan2(-dy, -dx);
+        this.x = WORLD_CENTER_COORD + Math.cos(angleToCenter) * radiusLimit;
+        this.y = WORLD_CENTER_COORD + Math.sin(angleToCenter) * radiusLimit;
+        this.angle = angleToCenter; // Turn towards center
+        this.targetAngle = angleToCenter;
       } else {
         this.dead = true;
         return;
@@ -150,10 +158,16 @@ class Snake {
     // Simple wander + wall avoidance
     this.targetAngle += (Math.random() - 0.5) * dt * 2;
     const wallMargin = 500;
-    if (this.x < wallMargin) this.targetAngle = lerpAngle(this.targetAngle, 0, dt * 2);
-    if (this.y < wallMargin) this.targetAngle = lerpAngle(this.targetAngle, Math.PI / 2, dt * 2);
-    if (this.x > WORLD_SIZE - wallMargin) this.targetAngle = lerpAngle(this.targetAngle, Math.PI, dt * 2);
-    if (this.y > WORLD_SIZE - wallMargin) this.targetAngle = lerpAngle(this.targetAngle, -Math.PI / 2, dt * 2);
+    const radiusLimit = this.worldRadiusLimit || 3000;
+    
+    const dx = this.x - WORLD_CENTER_COORD;
+    const dy = this.y - WORLD_CENTER_COORD;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist > radiusLimit - wallMargin) {
+      const angleToCenter = Math.atan2(-dy, -dx);
+      this.targetAngle = lerpAngle(this.targetAngle, angleToCenter, dt * 3);
+    }
   }
 
   toDTO() {
@@ -172,6 +186,7 @@ class Snake {
       speedTimer: this.speedTimer,
       magnetTimer: this.magnetTimer,
       isBot: this.isBot,
+      skinType: this.skinType,
       // Send only every 3rd segment to reduce bandwidth
       body: this.body.filter((_, i) => i % 3 === 0).slice(0, 60).map(s => [Math.round(s.x), Math.round(s.y)])
     };
@@ -225,8 +240,9 @@ class GameRoom {
     this.tickInterval = setInterval(() => this._tick(), 1000 / TICK_RATE);
   }
 
-  addPlayer(socketId, name, skinColor) {
+  addPlayer(socketId, name, skinColor, skinType = 'cyclops') {
     const snake = new Snake(socketId, name, skinColor, false);
+    snake.skinType = skinType;
     this.players.set(socketId, snake);
     this.inputs.set(socketId, { angle: 0, isBoosting: false });
 
@@ -269,6 +285,8 @@ class GameRoom {
     allSnakes.forEach(snake => {
       if (snake.dead) return;
       const input = this.inputs.get(snake.id);
+      // Passa o worldRadius para a cobra atualizar sua IA ou limites
+      snake.worldRadiusLimit = this.worldRadius;
       snake.update(dt, input);
     });
 

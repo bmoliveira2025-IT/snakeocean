@@ -1698,8 +1698,13 @@ export default function App() {
         // Tenta reaproveitar instância local se existir para manter suavidade
         let snake = s.snakes.find(ls => ls.id === dto.id);
         if (!snake) {
-          snake = new Snake(dto.x, dto.y, dto.name, dto.id === s.playerId, { color: dto.color, type: 'cyclops' });
+          // Nota: O servidor pode não enviar o skinType, então precisamos lidar com isso
+          // Por enquanto, usamos 'cyclops' como fallback
+          snake = new Snake(dto.x, dto.y, dto.name, dto.id === s.playerId, { color: dto.color, type: dto.skinType || 'cyclops' });
           snake.id = dto.id;
+        } else {
+          // SEMPRE atualiza se é o jogador (importante se joined chegar depois de state)
+          snake.isPlayer = (dto.id === s.playerId);
         }
         
         // Dados para interpolação (suavidade)
@@ -1708,13 +1713,16 @@ export default function App() {
         snake.targetAngle = dto.angle;
         
         snake.score = dto.score;
+        // Recalcula o tamanho visual com base no score atualizado
+        snake.size = snake.calculateSize();
+        
         snake.isBoosting = dto.isBoosting;
         snake.shieldTimer = dto.shieldTimer;
         snake.speedTimer = dto.speedTimer;
         snake.magnetTimer = dto.magnetTimer;
         
         // Atualiza corpo do DTO (o DTO envia apenas alguns segmentos para economizar banda)
-        if (dto.body) {
+        if (dto.body && dto.body.length > 0) {
           snake.body = dto.body.map(seg => ({ x: seg[0], y: seg[1] }));
         }
         
@@ -1816,7 +1824,8 @@ export default function App() {
   }, []);
 
   const spawnOrb = (x, y, value, isPowerup = false, type = 0, specificColor = null) => {
-    const o = new Orb(x, y, isPowerup, type, specificColor);
+    // Corrige os argumentos para bater com a definição da classe Orb(id, x, y, ...)
+    const o = new Orb(null, x, y, isPowerup, type, specificColor);
     o.value = value;
     state.current.orbs.push(o);
     state.current.spatialHash.insert(o);
@@ -1863,6 +1872,7 @@ export default function App() {
     s.socket.emit('join', { 
       name: finalName, 
       skinColor: chosenSkin.color,
+      skinType: chosenSkin.type,
       roomId: 'global' 
     });
 
@@ -2000,54 +2010,22 @@ export default function App() {
     if (s.player && !s.player.dead) {
       s.camera.baseZoomPulse += dt;
       
-      const lookAheadDist = s.player.isBoosting ? 200 : 60;
+      const lookAheadDist = s.player.isBoosting ? 200 : 70;
       const targetCamX = s.player.x + Math.cos(s.player.angle) * lookAheadDist;
       const targetCamY = s.player.y + Math.sin(s.player.angle) * lookAheadDist;
       
-      s.camera.x = lerp(s.camera.x, targetCamX, dt * 3.5);
-      s.camera.y = lerp(s.camera.y, targetCamY, dt * 3.5);
+      // Ajusta suavidade com base no fps (dt)
+      s.camera.x = lerp(s.camera.x, targetCamX, dt * 4);
+      s.camera.y = lerp(s.camera.y, targetCamY, dt * 4);
       
-      // Zoom mais fechado inicialmente (2.2) e escala ultra lenta (0.06)
-      // Isso mantém o foco no jogador e evita que a tela "fuja" demais
-      let baseZoom = Math.max(0.6, 2.2 * Math.pow(500 / Math.max(500, s.player.score), 0.06));
+      // Zoom progressivo baseado no tamanho/score
+      let baseZoom = Math.max(0.6, 1.8 * Math.pow(500 / Math.max(500, s.player.score), 0.12));
       
-      // Efeito de "respiração" da câmera (pulso orgânico suave)
-      baseZoom += Math.sin(s.camera.baseZoomPulse * 1.2) * 0.012;
+      // Efeito de pulso orgânico
+      baseZoom += Math.sin(s.camera.baseZoomPulse * 1.5) * 0.015;
 
-      if (s.player.isBoosting) baseZoom *= 0.92; // Redução mínima no boost para não perder foco
-      s.camera.zoom = lerp(s.camera.zoom, baseZoom, dt * 1.2); 
-
-      setScore(Math.floor(s.player.score));
-      setPowerups({
-        shield: Math.max(0, s.player.shieldTimer),
-        speed: Math.max(0, s.player.speedTimer),
-        magnet: 0 
-      });
-    }
-
-    // O Rei é calculado pelo servidor, mas podemos destacar o maior aqui localmente para o HUD
-    const currentKing = [...s.snakes].sort((a,b) => b.score - a.score)[0];
-    if (currentKing) {
-      s.snakes.forEach(snk => snk.isKing = (snk === currentKing));
-    }
-
-    if (s.player && !s.player.dead) {
-      s.camera.baseZoomPulse += dt;
-      
-      const lookAheadDist = s.player.isBoosting ? 200 : 60;
-      const targetCamX = s.player.x + Math.cos(s.player.angle) * lookAheadDist;
-      const targetCamY = s.player.y + Math.sin(s.player.angle) * lookAheadDist;
-
-      s.camera.x = lerp(s.camera.x, targetCamX, dt * 3.5);
-      s.camera.y = lerp(s.camera.y, targetCamY, dt * 3.5);
-      
-      let baseZoom = Math.max(0.65, 1.3 * Math.pow(500 / Math.max(500, s.player.score), 0.15));
-      
-      baseZoom += Math.sin(s.camera.baseZoomPulse * 1.5) * 0.02;
-
-      if (s.player.isBoosting) baseZoom *= 0.85; 
-
-      s.camera.zoom = lerp(s.camera.zoom, baseZoom, dt * 2.0); 
+      if (s.player.isBoosting) baseZoom *= 0.9; 
+      s.camera.zoom = lerp(s.camera.zoom, baseZoom, dt * 1.5); 
     }
 
     ctx.fillStyle = '#10141d'; 
