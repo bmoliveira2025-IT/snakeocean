@@ -64,6 +64,7 @@ class Snake {
     this.spawnProtection = 3.0;
     this.shieldTimer = 0;
     this.speedTimer = 0;
+    this.magnetTimer = 0;
     this.isBoosting = false;
     this.boostEnergy = 100;
     this.sessionCoins = 0;
@@ -94,6 +95,7 @@ class Snake {
     if (this.spawnProtection > 0) this.spawnProtection -= dt;
     if (this.shieldTimer > 0) this.shieldTimer -= dt;
     if (this.speedTimer > 0) this.speedTimer -= dt;
+    if (this.magnetTimer > 0) this.magnetTimer -= dt;
 
     // Apply input (for real players) or AI
     if (!this.isBot && input) {
@@ -162,6 +164,7 @@ class Snake {
       isBoosting: this.isBoosting,
       shieldTimer: this.shieldTimer,
       speedTimer: this.speedTimer,
+      magnetTimer: this.magnetTimer,
       isBot: this.isBot,
       // Send only every 3rd segment to reduce bandwidth
       body: this.body.filter((_, i) => i % 3 === 0).slice(0, 60).map(s => [Math.round(s.x), Math.round(s.y)])
@@ -261,13 +264,16 @@ class GameRoom {
     // Collect orbs
     allSnakes.forEach(snake => {
       if (snake.dead) return;
-      const r = snake.size * 1.5;
+      // Raio de coleta: base + bônus de imã
+      let r = snake.size * 1.8;
+      if (snake.magnetTimer > 0) r += 180; 
       this.orbs.forEach((orb, orbId) => {
         if (distSq(snake.x, snake.y, orb.x, orb.y) < r * r) {
           snake.score += orb.value;
           if (orb.isPowerup) {
             if (orb.type === 0) snake.shieldTimer = 8;
             else if (orb.type === 1) snake.speedTimer = 6;
+            else if (orb.type === 2) snake.magnetTimer = 10;
             else if (orb.type === 3) snake.sessionCoins++;
             this.events.push({ type: 'powerup', playerId: snake.id, orbType: orb.type });
           }

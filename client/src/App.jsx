@@ -1690,6 +1690,7 @@ export default function App() {
         snake.isBoosting = dto.isBoosting;
         snake.shieldTimer = dto.shieldTimer;
         snake.speedTimer = dto.speedTimer;
+        snake.magnetTimer = dto.magnetTimer;
         
         // Atualiza corpo do DTO (o DTO envia apenas alguns segmentos para economizar banda)
         if (dto.body) {
