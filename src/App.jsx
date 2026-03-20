@@ -1333,16 +1333,17 @@ export default function App() {
         .danger-pulse { animation: pulse-danger 2s infinite; border: 2px solid rgba(255,0,0,0.2); }
         .glass-panel { background: rgba(2, 12, 24, 0.35); backdrop-filter: blur(4px); border: 1px solid rgba(6, 182, 212, 0.15); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .quest-anim { animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .shine-effect { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% auto; animation: shine 2s linear infinite; }
-        
-        /* LANDSCAPE OPTIMIZATIONS */
+        /* LANDSCAPE OPTIMIZATIONS (Aggressive) */
         @media (max-height: 500px) {
-          h1 { font-size: 1.5rem !important; margin-bottom: 0 !important; }
-          .subtitle-hide { display: none !important; }
-          .glass-panel { padding: 0.25rem !important; }
+          .landscape-hide { display: none !important; }
+          .glass-panel { max-height: 98dvh !important; padding: 0.25rem !important; border: none; background: rgba(2, 12, 24, 0.6); }
           .carousel-container { padding-top: 0 !important; padding-bottom: 0 !important; }
-          .mergulhar-btn { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
+          .mergulhar-btn { height: 44px; padding: 0 20px !important; margin: 0 !important; font-size: 1rem !important; width: auto !important; flex: 0 0 auto !important; }
+          .name-input { height: 44px; margin: 0 !important; flex: 1; text-align: left !important; padding-left: 1rem !important; }
+          .top-row-landscape { flex-direction: row !important; gap: 0.5rem !important; width: 100% !important; max-width: 800px !important; margin-bottom: 0.25rem !important; }
+          .tabs-landscape { margin-bottom: 0.25rem !important; padding: 0.25rem !important; }
+          .selection-info-landscape { margin-bottom: 0 !important; }
+          .item-preview-landscape { width: 50px !important; h-height: 50px !important; }
         }
       `}</style>
 
@@ -1367,13 +1368,18 @@ export default function App() {
 
       {gameState === 'lobby' && hasInteracted && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-sm z-10 px-2 sm:px-4 py-4 overflow-hidden">
-          <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold text-sm md:text-base">🪙 {coins}</div></div>
-          <h1 className="text-2xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0 tracking-wider text-center">SNAKE OCEAN</h1>
-          <p className="subtitle-hide text-cyan-400/60 mb-1 md:mb-6 uppercase tracking-[0.3em] text-[9px] md:text-base">Deep Dive Evolution</p>
-
+          <div className="absolute top-4 right-4 flex gap-4 z-20"><div className="glass-panel px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold text-sm md:text-base">🪙 {coins}</div></div>
+          
+          <h1 className="landscape-hide text-2xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0 tracking-wider text-center">SNAKE OCEAN</h1>
+          <p className="landscape-hide text-cyan-400/60 mb-1 md:mb-6 uppercase tracking-[0.3em] text-[10px] md:text-base">Deep Dive Evolution</p>
+          
           <div className="glass-panel p-2 md:p-6 w-full max-w-4xl max-h-[90dvh] overflow-y-auto hide-scrollbar flex flex-col items-center rounded-2xl">
-            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-1.5 px-3 md:py-3 md:px-4 mb-1 md:mb-4 text-sm md:text-xl focus:outline-none focus:border-cyan-400 transition" />
-            <div className="flex flex-wrap justify-center gap-1 md:gap-2 mb-2 md:mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
+            <div className="top-row-landscape flex flex-col items-center w-full mb-1">
+              <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome" className="name-input w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-1.5 px-3 md:py-3 md:px-4 mb-1 md:mb-4 text-sm md:text-xl focus:outline-none focus:border-cyan-400 transition" />
+              <button onClick={startGame} className="md:hidden mergulhar-btn w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-transform">MERGULHAR</button>
+            </div>
+
+            <div className="tabs-landscape flex flex-wrap justify-center gap-1 md:gap-2 mb-1 md:mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
               {['skins', 'hats', 'mustaches', 'mouths'].map(tab => (
                 <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>
                   {tab === 'skins' ? '🐍 Skins' : tab === 'hats' ? '🎩 Chapéu' : tab === 'mustaches' ? '🕶️ Olhos' : '👄 Boca'}
@@ -1381,7 +1387,7 @@ export default function App() {
               ))}
             </div>
 
-            <div className="w-full max-w-3xl mb-0.5 md:mb-2 flex justify-between items-center text-[10px] md:text-sm font-bold text-gray-400 px-2 md:px-4">
+            <div className="selection-info-landscape w-full max-w-3xl mb-0.5 md:mb-2 flex justify-between items-center text-[10px] md:text-sm font-bold text-gray-400 px-2 md:px-4">
               <span>SELEÇÃO: <span className="text-white uppercase">{lobbyData.items.find(s => s.id === lobbyData.selected)?.name}</span></span>
               <span className="text-yellow-400 font-black">{lobbyData.items.find(s => s.id === lobbyData.selected)?.cost > 0 ? `🪙 ${lobbyData.items.find(s => s.id === lobbyData.selected)?.cost}` : 'GRÁTIS'}</span>
             </div>
@@ -1400,7 +1406,7 @@ export default function App() {
               <button onClick={() => carouselRef.current.scrollBy({ left: 150, behavior: 'smooth' })} className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
             </div>
 
-            <button onClick={startGame} className="mergulhar-btn mt-3 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
+            <button onClick={startGame} className="hidden md:block mergulhar-btn mt-3 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
               <div className="absolute inset-0 shine-effect opacity-50"></div>
               MERGULHAR
             </button>
