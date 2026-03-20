@@ -871,6 +871,8 @@ export default function App() {
   const [completedQuestsQueue, setCompletedQuestsQueue] = useState([]);
   const [streakMessage, setStreakMessage] = useState(null);
 
+  const canvasRef = useRef(null);
+  const carouselRef = useRef(null);
   const joystickRef = useRef(null);
   const engine = useRef({
     snakes: [], orbs: [], starfish: [], particles: [], critters: [],
@@ -1331,7 +1333,7 @@ export default function App() {
       `}</style>
       <canvas ref={canvasRef} className={`block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
       {gameState === 'lobby' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-start md:justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4 py-8 overflow-y-auto">
           <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold">🪙 {coins}</div></div>
           <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
           <p className="text-cyan-400/60 mb-6 uppercase tracking-[0.3em] text-xs md:text-base">Deep Dive Evolution</p>
