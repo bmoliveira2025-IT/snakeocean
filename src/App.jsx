@@ -1303,7 +1303,7 @@ export default function App() {
     const isFaceTab = lobbyTab === 'hats' || lobbyTab === 'mustaches' || lobbyTab === 'mouths';
 
     return (
-      <div className={`relative flex items-center justify-center w-20 h-20 md:h-32 md:w-32 rounded-xl transition-all duration-300 ${active ? 'bg-cyan-900/50 border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.6)] scale-105 z-10' : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/60'}`}>
+      <div className={`relative flex items-center justify-center w-16 h-16 md:h-32 md:w-32 rounded-xl transition-all duration-300 ${active ? 'bg-cyan-900/50 border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.6)] scale-105 z-10' : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/60'}`}>
         <LiveSnakePreview
           skinId={renderSkin}
           hatId={renderHat}
@@ -1341,11 +1341,11 @@ export default function App() {
       {gameState === 'lobby' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-sm z-10 px-2 sm:px-4 py-4 overflow-hidden">
           <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold text-sm md:text-base">🪙 {coins}</div></div>
-          <h1 className="text-3xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0.5 md:mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
-          <p className="text-cyan-400/60 mb-2 md:mb-6 uppercase tracking-[0.3em] text-[10px] md:text-base">Deep Dive Evolution</p>
+          <h1 className="text-2xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0 tracking-wider text-center">SNAKE OCEAN</h1>
+          <p className="text-cyan-400/60 mb-1 md:mb-6 uppercase tracking-[0.3em] text-[9px] md:text-base">Deep Dive Evolution</p>
 
-          <div className="glass-panel p-3 md:p-6 w-full max-w-4xl max-h-[85dvh] overflow-y-auto hide-scrollbar flex flex-col items-center rounded-2xl">
-            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-2 px-3 md:py-3 md:px-4 mb-2 md:mb-4 text-base md:text-xl focus:outline-none focus:border-cyan-400 transition" />
+          <div className="glass-panel p-2 md:p-6 w-full max-w-4xl max-h-[90dvh] overflow-y-auto hide-scrollbar flex flex-col items-center rounded-2xl">
+            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-1.5 px-3 md:py-3 md:px-4 mb-1 md:mb-4 text-sm md:text-xl focus:outline-none focus:border-cyan-400 transition" />
             <div className="flex flex-wrap justify-center gap-1 md:gap-2 mb-2 md:mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
               {['skins', 'hats', 'mustaches', 'mouths'].map(tab => (
                 <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>
@@ -1354,9 +1354,9 @@ export default function App() {
               ))}
             </div>
 
-            <div className="w-full max-w-3xl mb-1 md:mb-2 flex justify-between items-center text-xs md:text-sm font-bold text-gray-400 px-2 md:px-4">
+            <div className="w-full max-w-3xl mb-0.5 md:mb-2 flex justify-between items-center text-[10px] md:text-sm font-bold text-gray-400 px-2 md:px-4">
               <span>SELEÇÃO: <span className="text-white uppercase">{lobbyData.items.find(s => s.id === lobbyData.selected)?.name}</span></span>
-              <span className="text-yellow-400">{lobbyData.items.find(s => s.id === lobbyData.selected)?.cost > 0 ? `🪙 ${lobbyData.items.find(s => s.id === lobbyData.selected)?.cost}` : 'GRÁTIS'}</span>
+              <span className="text-yellow-400 font-black">{lobbyData.items.find(s => s.id === lobbyData.selected)?.cost > 0 ? `🪙 ${lobbyData.items.find(s => s.id === lobbyData.selected)?.cost}` : 'GRÁTIS'}</span>
             </div>
 
             <div className="relative w-full max-w-4xl flex items-center group">
@@ -1365,8 +1365,8 @@ export default function App() {
                 {lobbyData.items.map(item => (
                   <div key={item.id} className="snap-center cursor-pointer flex-shrink-0 flex flex-col items-center" onClick={() => lobbyData.unlocked.includes(item.id) ? selectItem(item, lobbyTab) : null}>
                     <ItemPreview item={item} active={lobbyData.selected === item.id} />
-                    <div className="text-center mt-2 md:mt-3 text-[9px] md:text-xs font-bold" style={{ color: item.rarity === 3 ? '#ec4899' : item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 3 ? 'ÉPICO' : item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
-                    {!lobbyData.unlocked.includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-1 md:mt-2 w-full py-1 text-[9px] md:text-xs font-bold rounded ${coins >= item.cost ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `DESBLOQUEAR` : `🪙 ${item.cost}`}</button>}
+                    <div className="text-center mt-1 md:mt-3 text-[8px] md:text-xs font-bold" style={{ color: item.rarity === 3 ? '#ec4899' : item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 3 ? 'ÉPICO' : item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
+                    {!lobbyData.unlocked.includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-1 md:mt-2 w-full py-0.5 text-[8px] md:text-xs font-bold rounded ${coins >= item.cost ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `COMPRAR` : `🪙 ${item.cost}`}</button>}
                   </div>
                 ))}
               </div>
