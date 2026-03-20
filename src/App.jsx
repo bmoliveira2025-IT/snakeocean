@@ -1263,7 +1263,10 @@ export default function App() {
           <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
           <p className="text-cyan-400/60 mb-6 uppercase tracking-[0.3em] text-xs md:text-base">Deep Dive Evolution</p>
           <div className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center w-full max-w-4xl">
-            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-3 px-4 mb-4 text-xl focus:outline-none focus:border-cyan-400 transition" />
+            <div className="flex flex-col md:flex-row gap-3 w-full max-w-lg mb-4">
+              <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="flex-1 text-center bg-black/50 border border-cyan-800 rounded-lg py-3 px-4 text-xl focus:outline-none focus:border-cyan-400 transition" />
+              <button onClick={startGame} className="md:w-48 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg font-display text-lg md:text-xl font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-transform flex items-center justify-center">MERGULHAR</button>
+            </div>
             <div className="flex flex-wrap justify-center gap-1 md:gap-2 mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
               {['skins', 'hats', 'mustaches'].map(tab => <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>{tab === 'skins' ? '🐍 Skins' : tab === 'hats' ? '🎩 Chapéu' : '🕶️ Rosto'}</button>)}
             </div>
@@ -1281,7 +1284,6 @@ export default function App() {
               </div>
               <button onClick={() => carouselRef.current.scrollBy({ left: 180, behavior: 'smooth' })} className="absolute right-0 z-10 w-12 h-12 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
             </div>
-            <button onClick={startGame} className="mt-4 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] active:scale-95 transition-transform">MERGULHAR</button>
           </div>
         </div>
       )}
