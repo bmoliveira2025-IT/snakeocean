@@ -421,12 +421,13 @@ class Starfish {
 }
 
 class Snake {
-  constructor(x, y, name, isPlayer, skinId, isGiant = false, hatId = 'none', mustacheId = 'none', mouthId = 'none') {
+  constructor(x, y, name, isPlayer, skinId, isGiant = false, hatId = 'none', mustacheId = 'none', mouthId = 'none', isPreview = false) {
     this.id = Math.random().toString(); this.name = name; this.isPlayer = isPlayer;
     this.skin = SKINS.find(s => s.id === skinId) || SKINS[0];
     this.hat = hatId; this.mustache = mustacheId; this.mouth = mouthId;
+    this.isPreview = isPreview;
     this.x = x; this.y = y; this.angle = Math.random() * Math.PI * 2;
-    this.score = isGiant ? Math.floor(randomRange(4000, 12000)) : (isPlayer ? 100 : 50);
+    this.score = isGiant ? Math.floor(randomRange(4000, 12000)) : (isPlayer ? 200 : 50);
     this.baseSpeed = 220; this.speed = this.baseSpeed;
     this.isBoosting = false; this.spawnTime = performance.now();
     this.isDead = false; this.kills = 0;
@@ -435,7 +436,7 @@ class Snake {
     this.rank = 0;
   }
 
-  get isInvulnerable() { return performance.now() - this.spawnTime < 3000; }
+  get isInvulnerable() { return !this.isPreview && performance.now() - this.spawnTime < 3000; }
   get size() { return 15 + Math.sqrt(this.score) * 0.15; }
   get targetLength() { return Math.max(10, Math.floor(this.score / 15)); }
 
@@ -447,28 +448,33 @@ class Snake {
     let speedMult = 1;
     if (this.activePowerups[1] && this.activePowerups[1] > now) speedMult = 3.5;
 
-    // Fator de escala MUITO MAIS agressivo: a velocidade base multiplica com o tamanho
     const sizeRatio = Math.max(1, this.size / 15);
     const currentBaseSpeed = this.baseSpeed * Math.pow(sizeRatio, 0.85);
 
-    if (this.isBoosting && this.score > 150 && !this.activePowerups[1]) {
-      // Quando gigante, o boost é ainda mais explosivo para compensar o zoom out da câmara
+    if (this.isBoosting && this.score > 100 && !this.activePowerups[1]) {
       const dynamicBoostMult = 2.4 + (sizeRatio * 0.4);
       this.speed = currentBaseSpeed * dynamicBoostMult;
-      this.score -= dt * (120 + this.size * 2.5); // Custo do boost proporcional ao tamanho
-      if (Math.random() < 0.35) {
+      this.score -= dt * (120 + this.size * 2.5);
+
+      if (Math.random() < 0.4) {
         if (this.segments.length > 2) {
           const tail = this.segments[this.segments.length - 1];
           const scaleColor = this.skin.colors[Math.floor(Math.random() * this.skin.colors.length)];
-          spawnedEntities.push({ type: 'orb', ent: new Orb(tail.x, tail.y, 8 + (this.size * 0.05), false, -1, scaleColor) });
+          const dropOrb = new Orb(tail.x + randomRange(-15, 15), tail.y + randomRange(-15, 15), 5 + (this.size * 0.1), false, -1, scaleColor);
+          dropOrb.droppedBy = this.id;
+          dropOrb.dropTime = now;
+          spawnedEntities.push({ type: 'orb', ent: dropOrb });
         }
       }
-      if (quality.bubbles && Math.random() < 0.6) {
+      if (quality.bubbles && Math.random() < 0.8) {
         const tail = this.segments.length > 0 ? this.segments[this.segments.length - 1] : this;
-        spawnedEntities.push({ type: 'particle', ent: new Particle(tail.x, tail.y, '#ffffff', 'bubble', this.isPlayer) });
+        const bub = new Particle(tail.x + randomRange(-20, 20), tail.y + randomRange(-20, 20), '#ffffff', 'bubble', this.isPlayer);
+        bub.size = randomRange(3, 8);
+        spawnedEntities.push({ type: 'particle', ent: bub });
       }
       if (this.isPlayer) audio.sfxBoost();
     } else {
+      if (this.score <= 100) this.isBoosting = false;
       this.speed = currentBaseSpeed * speedMult;
     }
 
@@ -562,8 +568,6 @@ class Snake {
             }
           }
         } else if (ent instanceof Orb || ent instanceof Starfish) {
-          // Dá prioridade MASSIVA a comidas de alto valor (restos de cobras)
-          // Eleva ao quadrado o valor da orbe para que os bots fiquem gulosos
           const fScore = ((ent.value || 10) ** 2) / (dSq + 1);
           if (fScore > bestFoodScore) { bestFoodScore = fScore; bestFood = ent; }
         }
@@ -594,12 +598,11 @@ class Snake {
         this.aiState = 'forage';
         if (bestFood) {
           targetX = bestFood.x; targetY = bestFood.y;
-          // Correr atrás dos restos! Se for comida de alto valor, usa o turbo para roubar.
           if (bestFood.value > 12 && distSq(headX, headY, bestFood.x, bestFood.y) < 700 * 700 && this.score > 150) {
             const angleToFood = Math.atan2(bestFood.y - headY, bestFood.x - headX);
             let angleDiff = Math.abs(this.angle - angleToFood);
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-            if (Math.abs(angleDiff) < 1.0) this.isBoosting = true; // Só acelera se estiver minimamente alinhado
+            if (Math.abs(angleDiff) < 1.0) this.isBoosting = true;
           }
         } else if (this.aiTimer <= 0) {
           this.aiTimer = randomRange(1, 3);
@@ -612,10 +615,11 @@ class Snake {
   }
 
   draw(ctx, quality) {
-    const isBlinking = this.isInvulnerable && Math.floor(performance.now() / 150) % 2 === 0;
-    if (isBlinking) ctx.globalAlpha = 0.4;
-    const sz = this.size; const colors = this.skin.colors; const now = performance.now();
+    const isInvuln = this.isInvulnerable;
+    const isBlinking = isInvuln && Math.floor(performance.now() / 150) % 2 === 0;
+    if (isInvuln) ctx.globalAlpha = isBlinking ? 0.4 : 0.75;
 
+    const sz = this.size; const colors = this.skin.colors; const now = performance.now();
     const isKing = this.rank === 1 && this.score > 500;
 
     const apply3DVolume = (radius) => {
@@ -655,12 +659,10 @@ class Snake {
         if (this.skin.style === 'scales') { ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = segSz * 0.1; ctx.beginPath(); ctx.arc(0, 0, segSz * 0.8, -Math.PI / 4, Math.PI / 4); ctx.stroke(); }
         if ((this.skin.style === 'fins' || this.skin.style === 'smooth') && i === Math.floor(this.segments.length / 3)) { ctx.fillStyle = colors[1] || colors[0]; ctx.beginPath(); ctx.moveTo(-segSz, -segSz * 0.5); ctx.quadraticCurveTo(-segSz * 1.5, -segSz * 3, segSz * 0.5, -segSz); ctx.fill(); ctx.beginPath(); ctx.moveTo(-segSz, segSz * 0.5); ctx.quadraticCurveTo(-segSz * 1.5, segSz * 3, segSz * 0.5, segSz); ctx.fill(); }
         if (this.skin.style === 'glow_butt' && i > this.segments.length - 6) { ctx.shadowBlur = 25; ctx.shadowColor = colors[0]; ctx.fill(); ctx.shadowBlur = 0; }
-        if (this.skin.style === 'neon' && isKing) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
       }
       ctx.restore();
     }
 
-    ctx.shadowBlur = 0;
     ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
     if (this.skin.style === 'hammer') {
       ctx.fillStyle = colors[0]; ctx.beginPath(); ctx.moveTo(-sz, -sz * 0.5); ctx.quadraticCurveTo(0, -sz * 2.5, sz * 0.5, -sz * 2.2); ctx.lineTo(sz, -sz * 2); ctx.quadraticCurveTo(sz * 1.5, 0, sz, sz * 2); ctx.lineTo(sz * 0.5, sz * 2.2); ctx.quadraticCurveTo(0, sz * 2.5, -sz, sz * 0.5); ctx.closePath(); ctx.fill(); apply3DVolume(sz * 1.3);
@@ -690,7 +692,6 @@ class Snake {
       ctx.fillStyle = '#fef08a'; ctx.shadowBlur = 25; ctx.shadowColor = '#fef08a'; ctx.beginPath(); ctx.arc(sz * 2.8, -sz * 0.5, sz * 0.4 + Math.sin(now / 200) * 2, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     }
 
-    // DESENHO DA BOCA (Novo Acessório)
     if (this.mouth !== 'none') {
       ctx.save();
       if (this.mouth === 'smile') {
@@ -713,7 +714,7 @@ class Snake {
         ctx.beginPath(); ctx.roundRect(sz * 0.78, -sz * 0.25, sz * 0.12, sz * 0.5, sz * 0.05); ctx.fill(); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(sz * 0.78, 0); ctx.lineTo(sz * 0.9, 0); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(sz * 0.84, -sz * 0.25); ctx.lineTo(sz * 0.84, sz * 0.25); ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sz * 0.84, -sz * 0.12, sz * 0.04, 0, Math.PI * 2); ctx.fill(); // Jewel
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sz * 0.84, -sz * 0.12, sz * 0.04, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
     }
@@ -740,16 +741,28 @@ class Snake {
     }
 
     if (this.activePowerups[0] && this.activePowerups[0] > performance.now()) { ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#06b6d4'; ctx.beginPath(); ctx.arc(0, 0, sz * 1.5, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
+
+    // Animação do Escudo de Spawn Protection (Invulnerabilidade)
+    if (isInvuln) {
+      ctx.save();
+      ctx.rotate(-this.angle + now / 400);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${isBlinking ? 0.9 : 0.4})`;
+      ctx.lineWidth = Math.max(2, sz * 0.1);
+      ctx.setLineDash([sz * 0.4, sz * 0.4]);
+      ctx.beginPath(); ctx.arc(0, 0, sz * 1.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.restore();
 
     if (quality.shadows || this.isPlayer) {
+      ctx.globalAlpha = 1.0;
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = `bold ${Math.max(12, sz * 0.6)}px sans-serif`; ctx.textAlign = 'center'; const nameY = this.y - sz * 1.6; ctx.fillText(this.name, this.x, nameY);
 
       const drawJewel = (jx, jy, c1, jr) => {
         ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(jx, jy, jr, 0, Math.PI * 2); ctx.fill();
       };
 
-      // COROAS PREMIUM LEVES E ELEGANTES (Líderes Top 3)
       if (isKing) {
         ctx.save(); ctx.translate(this.x, nameY - sz * 1.1); const crownScale = Math.max(1.0, Math.min(2.0, sz / 15)); ctx.scale(crownScale, crownScale);
         if (quality.shadows) { ctx.shadowBlur = 15; ctx.shadowColor = '#fbbf24'; }
@@ -757,7 +770,7 @@ class Snake {
         ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-18, -12); ctx.lineTo(-6, -6); ctx.lineTo(0, -16); ctx.lineTo(6, -6); ctx.lineTo(18, -12); ctx.lineTo(12, 0); ctx.closePath(); ctx.stroke();
         ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
         ctx.beginPath(); ctx.ellipse(0, 0, 12, 3, 0, 0, Math.PI * 2); ctx.stroke();
-        drawJewel(0, -16, '#fff', 1.5); drawJewel(-18, -12, '#fff', 1); drawJewel(18, -12, '#fff', 1); // Diamantes
+        drawJewel(0, -16, '#fff', 1.5); drawJewel(-18, -12, '#fff', 1); drawJewel(18, -12, '#fff', 1);
         ctx.restore();
       } else if (this.rank === 2) {
         ctx.save(); ctx.translate(this.x, nameY - sz * 0.8); const crownScale = Math.max(0.8, Math.min(1.5, sz / 18)); ctx.scale(crownScale, crownScale);
@@ -777,7 +790,6 @@ class Snake {
         ctx.restore();
       }
     }
-    if (isBlinking) ctx.globalAlpha = 1.0;
   }
 }
 
@@ -793,15 +805,13 @@ const LiveSnakePreview = ({ skinId, hatId, mustacheId, mouthId, active, isFaceTa
     const ctx = canvas.getContext('2d');
     let animationId;
 
-    // Cria uma instância real da cobra do jogo para a loja!
-    const s = new Snake(50, 50, '', false, skinId, false, hatId, mustacheId, mouthId);
-    s.score = 400; // Força um tamanho visual perfeito para a caixa (size ~18)
+    const s = new Snake(50, 50, '', false, skinId, false, hatId, mustacheId, mouthId, true);
+    s.score = 400;
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const now = performance.now();
 
-      // Anima o corpo a ondular (mesma fluidez do jogo real)
       s.segments = [];
       for (let i = 0; i < 8; i++) {
         s.segments.push({
@@ -815,14 +825,11 @@ const LiveSnakePreview = ({ skinId, hatId, mustacheId, mouthId, active, isFaceTa
       s.angle = s.segments[0].angle;
 
       ctx.save();
-      // Zoom dinâmico focado no rosto se estivermos a escolher um chapéu/boca/olhos
       if (isFaceTab) {
         ctx.translate(50, 50);
         ctx.scale(1.45, 1.45);
         ctx.translate(-50, -50);
       }
-
-      // Usa a renderização de alta qualidade verdadeira do jogo
       s.draw(ctx, { shadows: true, maxSegments: 10 });
       ctx.restore();
 
@@ -833,7 +840,7 @@ const LiveSnakePreview = ({ skinId, hatId, mustacheId, mouthId, active, isFaceTa
     return () => cancelAnimationFrame(animationId);
   }, [skinId, hatId, mustacheId, mouthId, active, isFaceTab]);
 
-  return <canvas ref={canvasRef} width={100} height={100} className="w-24 h-24 drop-shadow-2xl pointer-events-none" />;
+  return <canvas ref={canvasRef} width={100} height={100} className="w-16 h-16 md:w-24 md:h-24 drop-shadow-2xl pointer-events-none" />;
 };
 
 // ============================================================================
@@ -843,7 +850,7 @@ export default function App() {
   const [gameState, setGameState] = useState('lobby');
   const [coins, setCoins] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [settings, setSettings] = useState({ bgm: true, sfx: true, quality: 'medium' });
+  const [settings, setSettings] = useState({ bgm: true, sfx: true, quality: 'medium', autoQuality: true });
   const [playerName, setPlayerName] = useState('Player');
 
   const [lobbyTab, setLobbyTab] = useState('skins');
@@ -866,7 +873,6 @@ export default function App() {
   const [gameOverStats, setGameOverStats] = useState({});
   const [showSettings, setShowSettings] = useState(false);
 
-  // HUD MISSÕES & STREAKS
   const [activeQuests, setActiveQuests] = useState([]);
   const [completedQuestsQueue, setCompletedQuestsQueue] = useState([]);
   const [streakMessage, setStreakMessage] = useState(null);
@@ -963,7 +969,11 @@ export default function App() {
 
   useEffect(() => {
     const handleMouseMove = (e) => { engine.current.mouse = { x: e.clientX, y: e.clientY, active: true }; };
-    const handleMouseDown = (e) => { if (e.target.tagName === 'CANVAS') { engine.current.mouse.active = true; if (engine.current.player) engine.current.player.isBoosting = true; } };
+    const handleMouseDown = (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      engine.current.mouse.active = true;
+      if (engine.current.player) engine.current.player.isBoosting = true;
+    };
     const handleMouseUp = (e) => { if (engine.current.player) engine.current.player.isBoosting = false; };
     const handleKeyDown = (e) => { if (e.code === 'Space' && engine.current.player) engine.current.player.isBoosting = true; };
     const handleKeyUp = (e) => { if (e.code === 'Space' && engine.current.player) engine.current.player.isBoosting = false; };
@@ -1019,12 +1029,11 @@ export default function App() {
     if (e.isGameOverSequence) { if (now - e.gameOverTime > 2500) { e.isPlaying = false; e.isGameOverSequence = false; setGameState('gameover'); return; } }
     let dt = (timestamp - e.lastTime) / 1000; if (dt > 0.1) dt = 0.1; if (dt < 0) dt = 0; e.lastTime = timestamp;
 
-    // --- SISTEMA AUTO-PERFORMANCE (CONTROLE DE FPS) ---
     e.fps.frames++;
     if (now - e.fps.lastTime >= 1000) {
       e.fps.value = e.fps.frames;
       e.fps.history.push(e.fps.value);
-      if (e.fps.history.length > 5) e.fps.history.shift(); // Guarda 5 segundos de histórico
+      if (e.fps.history.length > 5) e.fps.history.shift();
       e.fps.frames = 0;
       e.fps.lastTime = now;
 
@@ -1032,11 +1041,9 @@ export default function App() {
         const avgFps = e.fps.history.reduce((a, b) => a + b, 0) / e.fps.history.length;
         if (e.fps.history.length >= 3) {
           if (avgFps < 45 && e.settings.quality !== 'low') {
-            // Downgrade automático se o jogo começar a engasgar
             e.settings.quality = e.settings.quality === 'high' ? 'medium' : 'low';
             e.fps.history = [];
           } else if (avgFps >= 58 && e.settings.quality !== 'high' && e.fps.history.length >= 5) {
-            // Upgrade automático se estiver liso e estável
             e.settings.quality = e.settings.quality === 'low' ? 'medium' : 'high';
             e.fps.history = [];
           }
@@ -1144,13 +1151,11 @@ export default function App() {
       }
     }
 
-    // Permite que TODOS (Jogador e Bots) comam as orbes e estrelas do mar
     const playerMagnet = (p && !p.isDead && p.activePowerups[2] && p.activePowerups[2] > now) ? 350 : (p && !p.isDead ? p.size * 2.2 : 0);
 
     for (let i = e.orbs.length - 1; i >= 0; i--) {
       const o = e.orbs[i];
       if (!o.target) {
-        // Lógica Genial: se foste tu a dropar a orbe, ficas imune ao magnetismo dela durante 1.5s
         let pCanEat = !(o.droppedBy === p?.id && (now - o.dropTime) < 1500);
 
         if (pCanEat && p && !p.isDead && distSq(p.x, p.y, o.x, o.y) < playerMagnet * playerMagnet) o.target = p;
@@ -1169,7 +1174,7 @@ export default function App() {
             if (o.isPowerup) { audio.sfxPowerup(); if (o.puType === 3) { e.sessionCoins++; audio.sfxCoin(); } else p.activePowerups[o.puType] = now + POWERUP_TYPES[o.puType].duration; }
             else { e.stats.orbsEaten++; p.score += o.value; audio.sfxPop(); if (now - e.combo.lastTime < 400) e.combo.count++; else e.combo.count = 1; e.combo.lastTime = now; if (e.combo.count >= 10) p.score += o.value; }
           } else {
-            if (!o.isPowerup) s.score += o.value; // Bots crescem comendo os restos!
+            if (!o.isPowerup) s.score += o.value;
           }
         }
         e.orbs.splice(i, 1);
@@ -1205,7 +1210,6 @@ export default function App() {
     e.particles = e.particles.filter(p => p.update(dt));
 
     const baseDpr = window.devicePixelRatio || 1;
-    // O limite Math.min(..., 2.0) impede que telemóveis de ecrã muito denso (3x ou 4x) sobreaqueçam.
     const dpr = Math.min(baseDpr, 2.0) * quality.dprMult;
 
     canvas.width = window.innerWidth * dpr;
@@ -1299,7 +1303,7 @@ export default function App() {
     const isFaceTab = lobbyTab === 'hats' || lobbyTab === 'mustaches' || lobbyTab === 'mouths';
 
     return (
-      <div className={`relative flex items-center justify-center h-32 w-32 rounded-xl transition-all duration-300 ${active ? 'bg-cyan-900/50 border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.6)] scale-105 z-10' : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/60'}`}>
+      <div className={`relative flex items-center justify-center w-20 h-20 md:h-32 md:w-32 rounded-xl transition-all duration-300 ${active ? 'bg-cyan-900/50 border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.6)] scale-105 z-10' : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/60'}`}>
         <LiveSnakePreview
           skinId={renderSkin}
           hatId={renderHat}
@@ -1308,7 +1312,7 @@ export default function App() {
           active={active}
           isFaceTab={isFaceTab}
         />
-        {!isUnlocked && <div className="absolute inset-0 bg-black/65 rounded-xl flex items-center justify-center backdrop-blur-[2px]"><span className="text-4xl">🔒</span></div>}
+        {!isUnlocked && <div className="absolute inset-0 bg-black/65 rounded-xl flex items-center justify-center backdrop-blur-[2px]"><span className="text-3xl md:text-4xl">🔒</span></div>}
       </div>
     );
   };
@@ -1316,7 +1320,7 @@ export default function App() {
   const lobbyData = getLobbyData();
 
   return (
-    <div className="relative w-full h-screen bg-gray-950 overflow-hidden font-sans text-white select-none" style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}>
+    <div className="fixed inset-0 w-full h-[100dvh] bg-[#020c18] overflow-hidden font-sans text-white select-none" style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;600;800&display=swap');
         * { font-family: 'Exo 2', sans-serif; } .font-display { font-family: 'Orbitron', sans-serif; }
@@ -1326,118 +1330,160 @@ export default function App() {
         @keyframes slideInRight { 0% { transform: translateX(100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
         @keyframes shine { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         .danger-pulse { animation: pulse-danger 2s infinite; border: 2px solid rgba(255,0,0,0.2); }
-        .glass-panel { background: rgba(2, 12, 24, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(6, 182, 212, 0.2); }
+        .glass-panel { background: rgba(2, 12, 24, 0.35); backdrop-filter: blur(4px); border: 1px solid rgba(6, 182, 212, 0.15); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .quest-anim { animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .shine-effect { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% auto; animation: shine 2s linear infinite; }
       `}</style>
-      <canvas ref={canvasRef} className={`block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
+
+      <canvas ref={canvasRef} className={`absolute inset-0 block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
+
       {gameState === 'lobby' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-start md:justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4 py-8 overflow-y-auto">
-          <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold">🪙 {coins}</div></div>
-          <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
-          <p className="text-cyan-400/60 mb-6 uppercase tracking-[0.3em] text-xs md:text-base">Deep Dive Evolution</p>
-          <div className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center w-full max-w-4xl">
-            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-3 px-4 mb-4 text-xl focus:outline-none focus:border-cyan-400 transition" />
-            <div className="flex flex-wrap justify-center gap-2 mb-4 bg-gray-900/50 p-2 rounded-xl backdrop-blur w-full max-w-2xl">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-sm z-10 px-2 sm:px-4 py-4 overflow-hidden">
+          <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold text-sm md:text-base">🪙 {coins}</div></div>
+          <h1 className="text-3xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0.5 md:mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
+          <p className="text-cyan-400/60 mb-2 md:mb-6 uppercase tracking-[0.3em] text-[10px] md:text-base">Deep Dive Evolution</p>
+
+          <div className="glass-panel p-3 md:p-6 w-full max-w-4xl max-h-[85dvh] overflow-y-auto hide-scrollbar flex flex-col items-center rounded-2xl">
+            <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-2 px-3 md:py-3 md:px-4 mb-2 md:mb-4 text-base md:text-xl focus:outline-none focus:border-cyan-400 transition" />
+            <div className="flex flex-wrap justify-center gap-1 md:gap-2 mb-2 md:mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
               {['skins', 'hats', 'mustaches', 'mouths'].map(tab => (
-                <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-2 rounded-lg font-bold text-xs md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>
+                <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>
                   {tab === 'skins' ? '🐍 Skins' : tab === 'hats' ? '🎩 Chapéu' : tab === 'mustaches' ? '🕶️ Olhos' : '👄 Boca'}
                 </button>
               ))}
             </div>
 
-            <div className="w-full max-w-3xl mb-2 flex justify-between items-center text-sm font-bold text-gray-400 px-4">
+            <div className="w-full max-w-3xl mb-1 md:mb-2 flex justify-between items-center text-xs md:text-sm font-bold text-gray-400 px-2 md:px-4">
               <span>SELEÇÃO: <span className="text-white uppercase">{lobbyData.items.find(s => s.id === lobbyData.selected)?.name}</span></span>
               <span className="text-yellow-400">{lobbyData.items.find(s => s.id === lobbyData.selected)?.cost > 0 ? `🪙 ${lobbyData.items.find(s => s.id === lobbyData.selected)?.cost}` : 'GRÁTIS'}</span>
             </div>
 
             <div className="relative w-full max-w-4xl flex items-center group">
-              <button onClick={() => carouselRef.current.scrollBy({ left: -180, behavior: 'smooth' })} className="absolute left-0 z-10 w-12 h-12 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8249;</button>
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto w-full py-4 px-2 md:px-10 snap-x hide-scrollbar scroll-smooth">
+              <button onClick={() => carouselRef.current.scrollBy({ left: -150, behavior: 'smooth' })} className="absolute left-0 z-10 w-10 h-10 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8249;</button>
+              <div ref={carouselRef} className="flex gap-2 md:gap-4 overflow-x-auto w-full py-2 md:py-4 px-1 md:px-10 snap-x hide-scrollbar scroll-smooth">
                 {lobbyData.items.map(item => (
-                  <div key={item.id} className="snap-center cursor-pointer flex-shrink-0 w-28 md:w-32 flex flex-col items-center" onClick={() => lobbyData.unlocked.includes(item.id) ? selectItem(item, lobbyTab) : null}>
+                  <div key={item.id} className="snap-center cursor-pointer flex-shrink-0 flex flex-col items-center" onClick={() => lobbyData.unlocked.includes(item.id) ? selectItem(item, lobbyTab) : null}>
                     <ItemPreview item={item} active={lobbyData.selected === item.id} />
-                    <div className="text-center mt-3 text-[10px] md:text-xs font-bold" style={{ color: item.rarity === 3 ? '#ec4899' : item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 3 ? 'ÉPICO' : item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
-                    {!lobbyData.unlocked.includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-2 w-full py-1 text-xs font-bold rounded ${coins >= item.cost ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `DESBLOQUEAR` : `🪙 ${item.cost}`}</button>}
+                    <div className="text-center mt-2 md:mt-3 text-[9px] md:text-xs font-bold" style={{ color: item.rarity === 3 ? '#ec4899' : item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 3 ? 'ÉPICO' : item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
+                    {!lobbyData.unlocked.includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-1 md:mt-2 w-full py-1 text-[9px] md:text-xs font-bold rounded ${coins >= item.cost ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `DESBLOQUEAR` : `🪙 ${item.cost}`}</button>}
                   </div>
                 ))}
               </div>
-              <button onClick={() => carouselRef.current.scrollBy({ left: 180, behavior: 'smooth' })} className="absolute right-0 z-10 w-12 h-12 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
+              <button onClick={() => carouselRef.current.scrollBy({ left: 150, behavior: 'smooth' })} className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
             </div>
-            <button onClick={startGame} className="mt-4 w-full max-w-lg py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
+
+            <button onClick={startGame} className="mt-3 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
               <div className="absolute inset-0 shine-effect opacity-50"></div>
               MERGULHAR
             </button>
           </div>
         </div>
       )}
+
       {gameState === 'playing' && (
-        <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between z-10">
+        <div className="absolute inset-0 pointer-events-none p-2 md:p-4 flex flex-col justify-between z-10">
           <div className="flex justify-between items-start">
-            <div className="glass-panel p-3 rounded-xl min-w-[120px] md:min-w-[150px]">
+            <div className="glass-panel p-2 md:p-3 rounded-xl min-w-[100px] md:min-w-[150px]">
               <div className="flex justify-between items-center mb-1">
-                <div className="text-gray-400 text-[10px] md:text-xs font-bold uppercase">Comprimento</div>
-                <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${hud.fps >= 50 ? 'bg-green-900/50 text-green-400' : hud.fps >= 30 ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'}`}>
+                <div className="text-gray-400 text-[9px] md:text-xs font-bold uppercase">Comprimento</div>
+                <div className={`text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded ${hud.fps >= 50 ? 'bg-green-900/50 text-green-400' : hud.fps >= 30 ? 'bg-yellow-900/50 text-yellow-400' : 'bg-red-900/50 text-red-400'}`}>
                   {hud.fps} FPS ({hud.quality === 'high' ? 'Alta' : hud.quality === 'medium' ? 'Média' : 'Baixa'})
                 </div>
               </div>
-              <div className="text-2xl md:text-3xl font-display font-bold text-white">{hud.length}</div>
-              <div className="text-cyan-400 text-xs md:text-sm mt-1 border-t border-cyan-800/50 pt-1">Rank #{hud.rank} de {hud.totalPlayers}</div>
-              <div className="text-yellow-400 text-xs md:text-sm font-bold mt-1">🪙 {hud.sessionCoins}</div>
+              <div className="text-xl md:text-3xl font-display font-bold text-white">{hud.length}</div>
+              <div className="text-cyan-400 text-[10px] md:text-sm mt-1 border-t border-cyan-800/50 pt-1">Rank #{hud.rank} de {hud.totalPlayers}</div>
+              <div className="text-yellow-400 text-[10px] md:text-sm font-bold mt-1">🪙 {hud.sessionCoins}</div>
             </div>
-            <div className="glass-panel p-3 rounded-xl min-w-[150px] md:min-w-[200px] flex flex-col gap-1 md:gap-2"><div className="text-center text-[10px] md:text-xs font-bold text-gray-400 tracking-widest mb-1">LEADERBOARD</div>{hud.top10.map((p, i) => <div key={i} className={`flex justify-between items-center text-[10px] md:text-sm ${p.isPlayer ? 'bg-cyan-900/50 rounded px-1' : ''}`}><div className="flex items-center gap-1 md:gap-2 overflow-hidden"><span className="text-gray-500 w-3 md:w-4">{i + 1}.</span><div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></div><span className={`truncate w-16 md:w-24 ${p.isPlayer ? 'text-white font-bold' : 'text-gray-300'}`}>{p.name}</span></div><span className="font-display text-cyan-400">{p.score}</span></div>)}</div>
+
+            <div className="glass-panel p-2 md:p-3 rounded-xl min-w-[120px] md:min-w-[200px] flex flex-col gap-1 md:gap-2">
+              <div className="text-center text-[9px] md:text-xs font-bold text-gray-400 tracking-widest mb-1">LEADERBOARD</div>
+              {hud.top10.map((p, i) => (
+                <div key={i} className={`flex justify-between items-center text-[9px] md:text-sm ${p.isPlayer ? 'bg-cyan-900/50 rounded px-1' : ''}`}>
+                  <div className="flex items-center gap-1 md:gap-2 overflow-hidden">
+                    <span className="text-gray-500 w-3 md:w-4">{i + 1}.</span>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }}></div>
+                    <span className={`truncate w-14 md:w-24 ${p.isPlayer ? 'text-white font-bold' : 'text-gray-300'}`}>{p.name}</span>
+                  </div>
+                  <span className="font-display text-cyan-400">{p.score}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex-1 flex justify-between items-center pb-8 md:pb-4">
-            {/* Missões / Quests */}
+          <div className="flex-1 flex justify-between items-center pb-6 md:pb-4">
             <div className="flex flex-col gap-2 mt-auto self-end">
               {activeQuests.map((q, i) => (
-                <div key={i} className={`glass-panel p-2 rounded-lg w-40 md:w-48 transition-all ${q.completed ? 'opacity-50 grayscale' : ''}`}>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase">{q.title}</div>
-                  <div className="text-xs text-white mb-1">{q.desc.replace('{target}', q.target)}</div>
+                <div key={i} className={`glass-panel p-2 rounded-lg w-32 md:w-48 transition-all ${q.completed ? 'opacity-50 grayscale' : ''}`}>
+                  <div className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase">{q.title}</div>
+                  <div className="text-[10px] md:text-xs text-white mb-1">{q.desc.replace('{target}', q.target)}</div>
                   <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
                     <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${Math.min(100, (q.current / q.target) * 100)}%` }}></div>
                   </div>
                 </div>
               ))}
               {completedQuestsQueue.map((q, i) => (
-                <div key={q.id + i} className="absolute left-4 bottom-40 bg-gradient-to-r from-yellow-500 to-orange-500 p-3 rounded-xl quest-anim shadow-[0_0_20px_rgba(252,211,77,0.6)]">
-                  <div className="text-xs font-black text-black">MISSÃO CUMPRIDA!</div>
-                  <div className="text-sm font-bold text-white">{q.title}</div>
-                  <div className="text-yellow-100 font-bold mt-1 text-xs">🪙 +{q.reward}</div>
+                <div key={q.id + i} className="absolute left-4 bottom-40 bg-gradient-to-r from-yellow-500 to-orange-500 p-2 md:p-3 rounded-xl quest-anim shadow-[0_0_20px_rgba(252,211,77,0.6)]">
+                  <div className="text-[10px] md:text-xs font-black text-black">MISSÃO CUMPRIDA!</div>
+                  <div className="text-xs md:text-sm font-bold text-white">{q.title}</div>
+                  <div className="text-yellow-100 font-bold mt-1 text-[10px] md:text-xs">🪙 +{q.reward}</div>
                 </div>
               ))}
             </div>
 
-            {/* STREAK MESSAGE */}
             {streakMessage && (
               <div key={streakMessage.id} className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50" style={{ animation: 'pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-                <div className="text-5xl md:text-7xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-red-400 to-red-600 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] italic tracking-tighter text-center" style={{ WebkitTextStroke: '2px black' }}>
+                <div className="text-4xl md:text-7xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-red-400 to-red-600 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] italic tracking-tighter text-center" style={{ WebkitTextStroke: '2px black' }}>
                   {streakMessage.text}
                 </div>
               </div>
             )}
 
-            {/* Powerups & Killfeed */}
             <div className="flex flex-col gap-1 items-end mt-auto self-end">
-              <div className="flex flex-col gap-2 mb-4">{powerupsHUD.map(pu => <div key={pu.id} className="glass-panel p-2 rounded-lg flex items-center gap-2 md:gap-3"><div className="text-lg md:text-xl">{['🛡️', '⚡', '🧲'][pu.id]}</div><div className="w-12 md:w-16 bg-gray-800 h-2 rounded-full overflow-hidden"><div className="h-full" style={{ width: `${(pu.rem / (POWERUP_TYPES[pu.id].duration / 1000)) * 100}%`, backgroundColor: POWERUP_TYPES[pu.id].color }}></div></div><div className="text-[10px] md:text-xs font-bold w-4 text-right">{pu.rem}s</div></div>)}</div>
-              {killFeed.map(k => <div key={k.id} className={`glass-panel px-2 md:px-3 py-1 rounded text-xs md:text-sm flex items-center gap-2 ${k.isKing ? 'border-yellow-500/50 bg-yellow-900/40' : ''}`}><span>{k.isKing ? '👑💀' : '💀'}</span> <span style={{ color: k.color, fontWeight: k.isKing ? 'bold' : 'normal' }}>{k.name}</span></div>)}
+              <div className="flex flex-col gap-1.5 md:gap-2 mb-2 md:mb-4">
+                {powerupsHUD.map(pu => (
+                  <div key={pu.id} className="glass-panel p-1.5 md:p-2 rounded-lg flex items-center gap-1.5 md:gap-3">
+                    <div className="text-base md:text-xl">{['🛡️', '⚡', '🧲'][pu.id]}</div>
+                    <div className="w-10 md:w-16 bg-gray-800 h-1.5 md:h-2 rounded-full overflow-hidden">
+                      <div className="h-full" style={{ width: `${(pu.rem / (POWERUP_TYPES[pu.id].duration / 1000)) * 100}%`, backgroundColor: POWERUP_TYPES[pu.id].color }}></div>
+                    </div>
+                    <div className="text-[9px] md:text-xs font-bold w-4 text-right">{pu.rem}s</div>
+                  </div>
+                ))}
+              </div>
+              {killFeed.map(k => (
+                <div key={k.id} className={`glass-panel px-1.5 md:px-3 py-0.5 md:py-1 rounded text-[10px] md:text-sm flex items-center gap-1 md:gap-2 ${k.isKing ? 'border-yellow-500/50 bg-yellow-900/40' : ''}`}>
+                  <span>{k.isKing ? '👑💀' : '💀'}</span>
+                  <span style={{ color: k.color, fontWeight: k.isKing ? 'bold' : 'normal' }}>{k.name}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="flex justify-between items-end"><div className="glass-panel px-3 md:px-4 py-2 rounded-xl text-lg md:text-xl font-display font-bold text-red-400">💀 {killCount}</div>{comboState.active && <div className="absolute left-1/2 bottom-32 md:bottom-20 -translate-x-1/2 text-center pointer-events-none" style={{ animation: 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}><div className={`text-4xl md:text-5xl font-display font-black italic ${comboState.count >= 10 ? 'text-yellow-400' : 'text-cyan-400'}`}>{comboState.count >= 10 ? '🔥 ULTRA' : `x${comboState.count}`}</div><div className="text-sm md:text-lg font-bold tracking-widest mt-1">COMBO</div></div>}<div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-cyan-800/50 bg-black/50 backdrop-blur flex items-center justify-center relative overflow-hidden hidden md:flex"><div className="absolute w-2 h-2 bg-white rounded-full"></div>{Array.from({ length: 4 }).map((_, i) => <div key={i} className="absolute w-1 h-1 bg-red-500/50 rounded-full" style={{ top: `${randomRange(20, 80)}%`, left: `${randomRange(20, 80)}%` }}></div>)}</div></div>
+          <div className="flex justify-between items-end">
+            <div className="glass-panel px-2 md:px-4 py-1.5 md:py-2 rounded-xl text-base md:text-xl font-display font-bold text-red-400">💀 {killCount}</div>
+            {comboState.active && (
+              <div className="absolute left-1/2 bottom-28 md:bottom-20 -translate-x-1/2 text-center pointer-events-none" style={{ animation: 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+                <div className={`text-3xl md:text-5xl font-display font-black italic ${comboState.count >= 10 ? 'text-yellow-400' : 'text-cyan-400'}`}>{comboState.count >= 10 ? '🔥 ULTRA' : `x${comboState.count}`}</div>
+                <div className="text-xs md:text-lg font-bold tracking-widest mt-1">COMBO</div>
+              </div>
+            )}
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-2 border-cyan-800/50 bg-black/50 backdrop-blur flex items-center justify-center relative overflow-hidden hidden md:flex">
+              <div className="absolute w-2 h-2 bg-white rounded-full"></div>
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="absolute w-1 h-1 bg-red-500/50 rounded-full" style={{ top: `${randomRange(20, 80)}%`, left: `${randomRange(20, 80)}%` }}></div>)}
+            </div>
+          </div>
         </div>
       )}
 
       {/* MOBILE & TABLET CONTROLS */}
       {gameState === 'playing' && (
         <div className="xl:hidden">
-          <div ref={joystickRef} id="joystick-base" className="absolute bottom-6 left-6 w-28 h-28 rounded-full border-2 border-cyan-500/30 bg-black/20 backdrop-blur z-20 pointer-events-auto">
-            <div className="absolute w-10 h-10 bg-cyan-400/50 rounded-full shadow-[0_0_10px_cyan] pointer-events-none transition-transform"
+          <div ref={joystickRef} id="joystick-base" className="absolute bottom-4 left-4 w-24 h-24 rounded-full border-2 border-cyan-500/30 bg-black/20 backdrop-blur z-20 pointer-events-auto">
+            <div className="absolute w-8 h-8 bg-cyan-400/50 rounded-full shadow-[0_0_10px_cyan] pointer-events-none transition-transform"
               style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${engine.current.joystick.x}px), calc(-50% + ${engine.current.joystick.y}px))` }}></div>
           </div>
-          <div className="absolute bottom-6 right-6 w-20 h-20 rounded-full border-2 border-yellow-500/50 bg-yellow-900/40 backdrop-blur z-20 pointer-events-auto flex items-center justify-center text-3xl shadow-[0_0_15px_rgba(234,179,8,0.3)] active:scale-90 transition-transform"
+          <div className="absolute bottom-4 right-4 w-16 h-16 rounded-full border-2 border-yellow-500/50 bg-yellow-900/40 backdrop-blur z-20 pointer-events-auto flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(234,179,8,0.3)] active:scale-90 transition-transform"
             onTouchStart={(e) => { e.preventDefault(); if (engine.current.player) engine.current.player.isBoosting = true; }}
             onTouchEnd={(e) => { e.preventDefault(); if (engine.current.player) engine.current.player.isBoosting = false; }}
             onMouseDown={(e) => { if (engine.current.player) engine.current.player.isBoosting = true; }}
@@ -1448,7 +1494,22 @@ export default function App() {
       )}
 
       {gameState === 'gameover' && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"><div className="glass-panel p-6 md:p-8 rounded-2xl w-full max-w-md text-center border-red-500/30 border-t-4 border-t-red-500"><h2 className="text-4xl md:text-5xl font-display font-black text-red-500 mb-2">GAME OVER</h2>{gameOverStats.newRecord && <div className="text-yellow-400 font-bold animate-pulse mb-4 text-lg md:text-xl">🏆 NOVO RECORDE!</div>}<div className="space-y-3 md:space-y-4 my-6 md:my-8 text-base md:text-lg"><div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Comprimento Final</span><span className="font-display font-bold">{gameOverStats.score}</span></div><div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Eliminações</span><span className="font-display font-bold text-red-400">💀 {gameOverStats.kills}</span></div><div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Moedas</span><span className="font-display font-bold text-yellow-400">🪙 +{gameOverStats.coins}</span></div><div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Tempo</span><span className="font-display font-bold">{Math.floor(gameOverStats.time / 60)}m {gameOverStats.time % 60}s</span></div></div><button onClick={() => setGameState('lobby')} className="w-full py-3 md:py-4 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold uppercase mb-4 transition">Voltar ao Lobby</button><button onClick={startGame} className="w-full py-3 md:py-4 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl font-display text-lg md:text-xl font-bold uppercase transition hover:scale-105">Jogar Novamente</button></div></div>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-hidden">
+          <div className="glass-panel p-4 md:p-8 rounded-2xl w-full max-w-md text-center border-red-500/30 border-t-4 border-t-red-500 max-h-[95dvh] overflow-y-auto hide-scrollbar">
+            <h2 className="text-3xl md:text-5xl font-display font-black text-red-500 mb-1 md:mb-2">GAME OVER</h2>
+            {gameOverStats.newRecord && <div className="text-yellow-400 font-bold animate-pulse mb-3 md:mb-4 text-base md:text-xl">🏆 NOVO RECORDE!</div>}
+
+            <div className="space-y-2 md:space-y-4 my-4 md:my-8 text-sm md:text-lg">
+              <div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Comprimento Final</span><span className="font-display font-bold">{gameOverStats.score}</span></div>
+              <div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Eliminações</span><span className="font-display font-bold text-red-400">💀 {gameOverStats.kills}</span></div>
+              <div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Moedas</span><span className="font-display font-bold text-yellow-400">🪙 +{gameOverStats.coins}</span></div>
+              <div className="flex justify-between border-b border-gray-800 pb-2"><span className="text-gray-400">Tempo</span><span className="font-display font-bold">{Math.floor(gameOverStats.time / 60)}m {gameOverStats.time % 60}s</span></div>
+            </div>
+
+            <button onClick={() => setGameState('lobby')} className="w-full py-2.5 md:py-4 bg-gray-800/80 hover:bg-gray-700 rounded-xl font-bold uppercase mb-2 md:mb-4 transition text-sm md:text-base">Voltar ao Lobby</button>
+            <button onClick={startGame} className="w-full py-2.5 md:py-4 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl font-display text-base md:text-xl font-bold uppercase transition hover:scale-105">Jogar Novamente</button>
+          </div>
+        </div>
       )}
     </div>
   );
