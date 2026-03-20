@@ -8,14 +8,15 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bmoliveira2025-IT/ocean.io.git"
-  },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bmoliveira2025-IT/snakeocean.git"
+  },
   "bugs": {
     "url": "https://github.com/bmoliveira2025-IT/ocean.io/issues"
   },
