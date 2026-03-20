@@ -876,6 +876,7 @@ export default function App() {
   const [activeQuests, setActiveQuests] = useState([]);
   const [completedQuestsQueue, setCompletedQuestsQueue] = useState([]);
   const [streakMessage, setStreakMessage] = useState(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const canvasRef = useRef(null);
   const carouselRef = useRef(null);
@@ -1334,15 +1335,41 @@ export default function App() {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .quest-anim { animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .shine-effect { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% auto; animation: shine 2s linear infinite; }
+        
+        /* LANDSCAPE OPTIMIZATIONS */
+        @media (max-height: 500px) {
+          h1 { font-size: 1.5rem !important; margin-bottom: 0 !important; }
+          .subtitle-hide { display: none !important; }
+          .glass-panel { padding: 0.25rem !important; }
+          .carousel-container { padding-top: 0 !important; padding-bottom: 0 !important; }
+          .mergulhar-btn { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
+        }
       `}</style>
 
       <canvas ref={canvasRef} className={`absolute inset-0 block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
 
-      {gameState === 'lobby' && (
+      <canvas ref={canvasRef} className={`absolute inset-0 block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
+
+      {!hasInteracted && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#020c18] z-[100] cursor-pointer" 
+             onClick={() => { enterFullscreen(); setHasInteracted(true); audio.init(); }}>
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+             <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/40 to-transparent"></div>
+          </div>
+          <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-4 tracking-wider text-center animate-pulse">SNAKE OCEAN</h1>
+          <div className="bg-cyan-500/20 px-8 py-4 rounded-2xl border border-cyan-400/30 backdrop-blur-md hover:bg-cyan-500/30 transition-all group">
+            <span className="text-xl md:text-3xl font-bold tracking-[0.2em] text-cyan-300 group-hover:scale-110 block">TAP TO START</span>
+            <span className="text-[10px] md:text-sm text-cyan-400/60 block mt-2 text-center uppercase">Toque para começar</span>
+          </div>
+          <div className="absolute bottom-12 text-gray-500 text-xs animate-bounce italic">Optimization for Mobile & Tablet</div>
+        </div>
+      )}
+
+      {gameState === 'lobby' && hasInteracted && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-sm z-10 px-2 sm:px-4 py-4 overflow-hidden">
           <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold text-sm md:text-base">🪙 {coins}</div></div>
           <h1 className="text-2xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-0 tracking-wider text-center">SNAKE OCEAN</h1>
-          <p className="text-cyan-400/60 mb-1 md:mb-6 uppercase tracking-[0.3em] text-[9px] md:text-base">Deep Dive Evolution</p>
+          <p className="subtitle-hide text-cyan-400/60 mb-1 md:mb-6 uppercase tracking-[0.3em] text-[9px] md:text-base">Deep Dive Evolution</p>
 
           <div className="glass-panel p-2 md:p-6 w-full max-w-4xl max-h-[90dvh] overflow-y-auto hide-scrollbar flex flex-col items-center rounded-2xl">
             <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="w-full max-w-lg text-center bg-black/50 border border-cyan-800 rounded-lg py-1.5 px-3 md:py-3 md:px-4 mb-1 md:mb-4 text-sm md:text-xl focus:outline-none focus:border-cyan-400 transition" />
@@ -1373,7 +1400,7 @@ export default function App() {
               <button onClick={() => carouselRef.current.scrollBy({ left: 150, behavior: 'smooth' })} className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
             </div>
 
-            <button onClick={startGame} className="mt-3 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
+            <button onClick={startGame} className="mergulhar-btn mt-3 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 transition-transform relative overflow-hidden group">
               <div className="absolute inset-0 shine-effect opacity-50"></div>
               MERGULHAR
             </button>
