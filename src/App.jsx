@@ -1258,14 +1258,14 @@ export default function App() {
       `}</style>
       <canvas ref={canvasRef} className={`block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
       {gameState === 'lobby' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-start md:justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4 overflow-y-auto py-8">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-2 md:px-4">
           <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold">🪙 {coins}</div><button onClick={() => setShowSettings(true)} className="glass-panel p-2 rounded-full hover:bg-cyan-900/50 transition">⚙️</button></div>
           <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
           <p className="text-cyan-400/60 mb-6 uppercase tracking-[0.3em] text-xs md:text-base">Deep Dive Evolution</p>
-          <div className="glass-panel p-4 md:p-6 rounded-2xl flex flex-col items-center w-full max-w-4xl">
-            <div className="flex flex-col md:flex-row gap-3 w-full max-w-lg mb-4">
-              <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome do Jogador" className="flex-1 text-center bg-black/50 border border-cyan-800 rounded-lg py-3 px-4 text-xl focus:outline-none focus:border-cyan-400 transition" />
-              <button onClick={startGame} className="md:w-48 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg font-display text-lg md:text-xl font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-transform flex items-center justify-center">MERGULHAR</button>
+          <div className="glass-panel p-2 md:p-6 rounded-2xl flex flex-col items-center w-full max-w-4xl">
+            <div className="flex flex-row gap-2 md:gap-3 w-full max-w-lg mb-2 md:mb-4">
+              <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value.slice(0, 15))} placeholder="Nome" className="flex-1 text-center bg-black/50 border border-cyan-800 rounded-lg py-2 md:py-3 px-2 md:px-4 text-sm md:text-xl focus:outline-none focus:border-cyan-400 transition" />
+              <button onClick={startGame} className="px-4 md:px-10 py-2 md:py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg font-display text-xs md:text-xl font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)] active:scale-95 transition-transform flex items-center justify-center">MERGULHAR</button>
             </div>
             <div className="flex flex-wrap justify-center gap-1 md:gap-2 mb-4 bg-gray-900/50 p-1 md:p-2 rounded-xl backdrop-blur w-full max-w-2xl">
               {['skins', 'hats', 'mustaches'].map(tab => <button key={tab} onClick={() => setLobbyTab(tab)} className={`flex-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-sm transition ${lobbyTab === tab ? 'bg-cyan-600' : 'hover:bg-gray-800 text-gray-400'}`}>{tab === 'skins' ? '🐍 Skins' : tab === 'hats' ? '🎩 Chapéu' : '🕶️ Rosto'}</button>)}
@@ -1273,12 +1273,12 @@ export default function App() {
             <div className="w-full max-w-3xl mb-2 flex justify-between items-center text-sm font-bold text-gray-400 px-4"><span>SELEÇÃO: <span className="text-white uppercase">{(lobbyTab === 'skins' ? SKINS : lobbyTab === 'hats' ? HATS : MUSTACHES).find(s => s.id === (lobbyTab === 'skins' ? selectedSkinId : lobbyTab === 'hats' ? selectedHat : selectedMustache))?.name}</span></span><span className="text-yellow-400">{(lobbyTab === 'skins' ? SKINS : lobbyTab === 'hats' ? HATS : MUSTACHES).find(s => s.id === (lobbyTab === 'skins' ? selectedSkinId : lobbyTab === 'hats' ? selectedHat : selectedMustache))?.cost > 0 ? `🪙 ${(lobbyTab === 'skins' ? SKINS : lobbyTab === 'hats' ? HATS : MUSTACHES).find(s => s.id === (lobbyTab === 'skins' ? selectedSkinId : lobbyTab === 'hats' ? selectedHat : selectedMustache))?.cost}` : 'GRÁTIS'}</span></div>
             <div className="relative w-full max-w-4xl flex items-center group">
               <button onClick={() => carouselRef.current.scrollBy({ left: -180, behavior: 'smooth' })} className="absolute left-0 z-10 w-12 h-12 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8249;</button>
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto w-full py-4 px-2 md:px-10 snap-x hide-scrollbar scroll-smooth">
+              <div ref={carouselRef} className="flex gap-2 md:gap-4 overflow-x-auto w-full py-2 md:py-4 px-2 md:px-10 snap-x hide-scrollbar scroll-smooth">
                 {(lobbyTab === 'skins' ? SKINS : lobbyTab === 'hats' ? HATS : MUSTACHES).map(item => (
-                  <div key={item.id} className="snap-center cursor-pointer flex-shrink-0 w-28 md:w-32 flex flex-col items-center" onClick={() => (lobbyTab === 'skins' ? unlockedSkins : lobbyTab === 'hats' ? unlockedHats : unlockedMustaches).includes(item.id) ? selectItem(item, lobbyTab) : null}>
+                  <div key={item.id} className="snap-center cursor-pointer flex-shrink-0 w-24 md:w-32 flex flex-col items-center" onClick={() => (lobbyTab === 'skins' ? unlockedSkins : lobbyTab === 'hats' ? unlockedHats : unlockedMustaches).includes(item.id) ? selectItem(item, lobbyTab) : null}>
                     <ItemPreview item={item} active={(lobbyTab === 'skins' ? selectedSkinId : lobbyTab === 'hats' ? selectedHat : selectedMustache) === item.id} />
-                    <div className="text-center mt-3 text-[10px] md:text-xs font-bold" style={{ color: item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
-                    {!(lobbyTab === 'skins' ? unlockedSkins : lobbyTab === 'hats' ? unlockedHats : unlockedMustaches).includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-2 w-full py-1 text-xs rounded ${coins >= item.cost ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `DESBLOQUEAR` : `🪙 ${item.cost}`}</button>}
+                    <div className="text-center mt-1 md:mt-3 text-[8px] md:text-xs font-bold" style={{ color: item.rarity === 2 ? '#fde047' : item.rarity === 1 ? '#a855f7' : '#9ca3af' }}>{item.rarity === 2 ? 'PREMIUM' : item.rarity === 1 ? 'RARO' : 'NORMAL'}</div>
+                    {!(lobbyTab === 'skins' ? unlockedSkins : lobbyTab === 'hats' ? unlockedHats : unlockedMustaches).includes(item.id) && <button onClick={(e) => { e.stopPropagation(); unlockItem(item, lobbyTab); }} className={`mt-1 md:mt-2 w-full py-1 text-[8px] md:text-xs rounded ${coins >= item.cost ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{coins >= item.cost ? `DESBLOQUEAR` : `🪙 ${item.cost}`}</button>}
                   </div>
                 ))}
               </div>
