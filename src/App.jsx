@@ -1230,7 +1230,7 @@ export default function App() {
       `}</style>
       <canvas ref={canvasRef} className={`block w-full h-full ${dangerZone ? 'danger-pulse' : ''}`} />
       {gameState === 'lobby' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-start md:justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#010e1f] to-black z-10 px-4 overflow-y-auto py-8">
           <div className="absolute top-4 right-4 flex gap-4"><div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 font-display text-yellow-400 font-bold">🪙 {coins}</div><button onClick={() => setShowSettings(true)} className="glass-panel p-2 rounded-full hover:bg-cyan-900/50 transition">⚙️</button></div>
           <h1 className="text-5xl md:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 mb-2 tracking-wider text-center">SNAKE OCEAN</h1>
           <p className="text-cyan-400/60 mb-6 uppercase tracking-[0.3em] text-xs md:text-base">Deep Dive Evolution</p>
@@ -1253,7 +1253,7 @@ export default function App() {
               </div>
               <button onClick={() => carouselRef.current.scrollBy({ left: 180, behavior: 'smooth' })} className="absolute right-0 z-10 w-12 h-12 flex items-center justify-center bg-black/80 rounded-full border border-cyan-500/50 hidden md:flex text-3xl">&#8250;</button>
             </div>
-            <button onClick={startGame} className="mt-4 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)]">MERGULHAR</button>
+            <button onClick={startGame} className="mt-4 md:mt-6 w-full max-w-lg py-3 md:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-display text-lg md:text-2xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(6,182,212,0.4)] active:scale-95 transition-transform">MERGULHAR</button>
           </div>
         </div>
       )}
