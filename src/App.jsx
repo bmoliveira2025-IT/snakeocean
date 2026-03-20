@@ -778,7 +778,7 @@ export default function App() {
 
   const enterFullscreen = () => {
     const el = document.documentElement;
-    const rfs = el.requestFullscreen || (el as any).webkitRequestFullScreen || (el as any).mozRequestFullScreen || (el as any).msRequestFullscreen;
+    const rfs = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
     if (rfs) rfs.call(el).catch(() => {});
   };
 
