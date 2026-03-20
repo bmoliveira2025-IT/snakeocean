@@ -785,10 +785,38 @@ export default function App() {
   // Evitar gestos nativos que estraguem o joystick
   useEffect(() => {
     const preventDefaultTouch = (e) => {
-      if (gameState === 'playing' && e.target.tagName === 'CANVAS') e.preventDefault();
+      if (gameState === 'playing') e.preventDefault();
     };
+    
+    // Joystick handlers with passive: false to avoid "Unable to preventDefault" error
+    const jBase = document.getElementById('joystick-base');
+    const handleTouch = (e) => {
+      e.preventDefault();
+      if (e.type === 'touchstart' || e.type === 'touchmove') {
+        const touch = e.touches[0];
+        engine.current.joystick.active = true;
+        updateJoystick(touch);
+      } else if (e.type === 'touchend') {
+        engine.current.joystick = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
+        setJoystickPos({ x: 0, y: 0 });
+      }
+    };
+
+    if (gameState === 'playing' && jBase) {
+      jBase.addEventListener('touchstart', handleTouch, { passive: false });
+      jBase.addEventListener('touchmove', handleTouch, { passive: false });
+      jBase.addEventListener('touchend', handleTouch, { passive: false });
+    }
+
     document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
-    return () => document.removeEventListener('touchmove', preventDefaultTouch);
+    return () => {
+      document.removeEventListener('touchmove', preventDefaultTouch);
+      if (jBase) {
+        jBase.removeEventListener('touchstart', handleTouch);
+        jBase.removeEventListener('touchmove', handleTouch);
+        jBase.removeEventListener('touchend', handleTouch);
+      }
+    };
   }, [gameState]);
 
   useEffect(() => {
@@ -1289,10 +1317,7 @@ export default function App() {
       {/* MOBILE & TABLET CONTROLS */}
       {gameState === 'playing' && (
         <div className="xl:hidden">
-          <div id="joystick-base" className="absolute bottom-6 left-6 w-28 h-28 rounded-full border-2 border-cyan-500/30 bg-black/20 backdrop-blur z-20 pointer-events-auto"
-            onTouchStart={(e) => { e.preventDefault(); const touch = e.touches[0]; engine.current.joystick.active = true; updateJoystick(touch); }}
-            onTouchMove={(e) => { e.preventDefault(); updateJoystick(e.touches[0]); }}
-            onTouchEnd={(e) => { e.preventDefault(); engine.current.joystick = { active: false, x: 0, y: 0, dx: 0, dy: 0 }; setJoystickPos({ x: 0, y: 0 }); }}>
+          <div id="joystick-base" className="absolute bottom-6 left-6 w-28 h-28 rounded-full border-2 border-cyan-500/30 bg-black/20 backdrop-blur z-20 pointer-events-auto">
             <div className="absolute w-10 h-10 bg-cyan-400/50 rounded-full shadow-[0_0_10px_cyan] pointer-events-none transition-transform"
               style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))` }}></div>
           </div>
