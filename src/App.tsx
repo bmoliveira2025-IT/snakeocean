@@ -724,6 +724,7 @@ export default function App() {
   const [frenzyBanner, setFrenzyBanner] = useState(false);
   const [killStreakDisplay, setKillStreakDisplay] = useState({ count: 0, active: false });
   const [levelUpDisplay, setLevelUpDisplay] = useState({ level: 0, show: false });
+  const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const canvasRef = useRef(null);
   const carouselRef = useRef(null);
   const engine = useRef({
@@ -775,6 +776,12 @@ export default function App() {
   };
   const updateSettings = (k, v) => { setSettings(s => { const ns = { ...s, [k]: v }; localStorage.setItem('ocean_settings', JSON.stringify(ns)); if (k === 'bgm') audio.setBGM(v); if (k === 'sfx') audio.setSFX(v); return ns; }); };
 
+  const enterFullscreen = () => {
+    const el = document.documentElement;
+    const rfs = el.requestFullscreen || (el as any).webkitRequestFullScreen || (el as any).mozRequestFullScreen || (el as any).msRequestFullscreen;
+    if (rfs) rfs.call(el).catch(() => {});
+  };
+
   // Evitar gestos nativos que estraguem o joystick
   useEffect(() => {
     const preventDefaultTouch = (e) => {
@@ -799,6 +806,7 @@ export default function App() {
 
   const startGame = () => {
     audio.init(); if (settings.bgm) audio.setBGM(true);
+    if (window.innerWidth < 1024) enterFullscreen();
     const e = engine.current; e.snakes = []; e.orbs = []; e.starfish = []; e.particles = []; e.critters = []; e.spatialHash.clear(); e.worldRadius = BASE_WORLD_RADIUS; e.globalAI = { generation: 1, deaths: 0 }; e.sessionCoins = 0; e.sessionKills = 0; e.sessionMaxScore = 0; e.startTime = performance.now(); e.isPlaying = true; e.isGameOverSequence = false;
     e.screenShake = 0; e.deathFlash = 0; e.playerLevel = 1; e.frenzyTimer = 90; e.frenzyActive = false; e.frenzyDuration = 0;
     e.killStreak = 0; e.killStreakTime = 0; e.killStreakActive = false;
@@ -1041,7 +1049,10 @@ export default function App() {
     if (p && !p.isDead) {
       const baseLookAhead = p.isBoosting ? 300 : 150; const sizeMultiplier = 1 + (p.size / 100); const lookAhead = baseLookAhead * sizeMultiplier;
       let targetCamX = p.x + Math.cos(p.angle) * lookAhead; let targetCamY = p.y + Math.sin(p.angle) * lookAhead;
-      let targetZoom = 1.2 - (p.size * 0.006); targetZoom = Math.max(0.4, Math.min(1.2, targetZoom));
+      let targetZoom = 1.2 - (p.size * 0.006);
+      if (window.innerWidth < 768) targetZoom *= 0.7; // Wider view on mobile
+      targetZoom = Math.max(0.3, Math.min(1.2, targetZoom));
+
       if (p.isBoosting) targetZoom *= 0.85;
       let threatFactor = 0; for (const other of e.snakes) { if (other !== p && !other.isDead && other.score > p.score * 1.2) { const dSq = distSq(p.x, p.y, other.x, other.y); if (dSq < 1000 * 1000) { threatFactor = Math.max(threatFactor, 1 - (Math.sqrt(dSq) / 1000)); } } }
       targetZoom *= (1 - (threatFactor * 0.15)); targetZoom = Math.max(0.3, targetZoom); targetZoom += Math.sin(now / 2000) * 0.01;
@@ -1179,6 +1190,7 @@ export default function App() {
     const d = Math.sqrt(dx * dx + dy * dy); const maxR = base.width / 2;
     if (d > maxR) { dx = (dx / d) * maxR; dy = (dy / d) * maxR; }
     engine.current.joystick = { active: true, x: dx, y: dy, dx: dx / maxR, dy: dy / maxR };
+    setJoystickPos({ x: dx, y: dy });
   };
 
   const ItemPreview = ({ item, active }) => {
@@ -1280,9 +1292,9 @@ export default function App() {
           <div id="joystick-base" className="absolute bottom-6 left-6 w-28 h-28 rounded-full border-2 border-cyan-500/30 bg-black/20 backdrop-blur z-20 pointer-events-auto"
             onTouchStart={(e) => { e.preventDefault(); const touch = e.touches[0]; engine.current.joystick.active = true; updateJoystick(touch); }}
             onTouchMove={(e) => { e.preventDefault(); updateJoystick(e.touches[0]); }}
-            onTouchEnd={(e) => { e.preventDefault(); engine.current.joystick = { active: false, x: 0, y: 0, dx: 0, dy: 0 }; }}>
+            onTouchEnd={(e) => { e.preventDefault(); engine.current.joystick = { active: false, x: 0, y: 0, dx: 0, dy: 0 }; setJoystickPos({ x: 0, y: 0 }); }}>
             <div className="absolute w-10 h-10 bg-cyan-400/50 rounded-full shadow-[0_0_10px_cyan] pointer-events-none transition-transform"
-              style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${engine.current.joystick.x}px), calc(-50% + ${engine.current.joystick.y}px))` }}></div>
+              style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))` }}></div>
           </div>
           <div className="absolute bottom-6 right-6 w-20 h-20 rounded-full border-2 border-yellow-500/50 bg-yellow-900/40 backdrop-blur z-20 pointer-events-auto flex items-center justify-center text-3xl shadow-[0_0_15px_rgba(234,179,8,0.3)] active:scale-90 transition-transform"
             onTouchStart={(e) => { e.preventDefault(); if (engine.current.player) engine.current.player.isBoosting = true; }}
