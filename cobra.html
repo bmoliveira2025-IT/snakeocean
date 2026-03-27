@@ -607,6 +607,7 @@
         // --- MULTIPLAYER SETUP ---
         const socket = io();
         let myId = null;
+        let lastUpdateTime = 0;
         const otherPlayers = {};
         
         socket.on('init', (data) => {
@@ -780,12 +781,13 @@
         const checkPerfectCollision = (headX, headY, headR, headAngle, target) => {
             const tipX = headX + Math.cos(headAngle) * (headR * 0.3);
             const tipY = headY + Math.sin(headAngle) * (headR * 0.3);
-            const maxHistoryIdx = Math.min(Math.floor(target.length) * target.historySpacing, target.history.length - 1);
+            const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
+            const maxHistoryIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
             
-            for (let i = 0; i <= maxHistoryIdx; i += target.historySpacing) {
+            for (let i = 0; i <= maxHistoryIdx; i += spacing) {
                 const s = target.history[i]; if (!s) continue;
                 const distSq = (tipX - s.x)**2 + (tipY - s.y)**2;
-                const threshold = target.radius * GAME_CONFIG.SNAKE_HITBOX_SIZE;
+                const threshold = (target.radius || GAME_CONFIG.SNAKE_INITIAL_RADIUS) * GAME_CONFIG.SNAKE_HITBOX_SIZE;
                 if (distSq < threshold**2) return true;
             }
             return false;
@@ -1019,17 +1021,21 @@
             // Server should ideally handle this, but for now client-side check if someone else ate it is too slow.
             // We rely on 'foodEaten' event above.
 
-            // Send local state to server
-            socket.emit('update', {
-                x: player.x,
-                y: player.y,
-                angle: player.angle,
-                score: player.score,
-                length: player.length,
-                radius: player.radius,
-                history: player.history.slice(0, 100), // Cap history for performance
-                isBoosting: isBoosting
-            });
+            // Send local state to server (Throttled to ~20Hz for bandwidth efficiency)
+            const now = Date.now();
+            if (now - lastUpdateTime > 50) { 
+                lastUpdateTime = now;
+                socket.emit('update', {
+                    x: player.x,
+                    y: player.y,
+                    angle: player.angle,
+                    score: player.score,
+                    length: player.length,
+                    radius: player.radius,
+                    history: player.history, // Send full history for accurate collision and rendering
+                    isBoosting: isBoosting
+                });
+            }
 
             liveScoreVal.innerText = Math.floor(player.score);
 
@@ -1197,8 +1203,9 @@
             
             context.beginPath();
             let first = true;
+            const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
             for (let i = segments - 1; i > 0; i--) {
-                const pos = entity.history[i * entity.historySpacing];
+                const pos = entity.history[i * spacing];
                 if (!pos) continue;
                 if (first) { context.moveTo(pos.x, pos.y); first = false; }
                 else { context.lineTo(pos.x, pos.y); }
@@ -1209,7 +1216,7 @@
 
             // PASS 2: Gomos Sólidos (Listras) - Agora vai até ao índice 0 (cabeça integrada no tubo)
             for (let i = segments - 1; i >= 0; i--) {
-                const pos = i === 0 ? {x: entity.x, y: entity.y} : entity.history[i * entity.historySpacing];
+                const pos = i === 0 ? {x: entity.x, y: entity.y} : entity.history[i * spacing];
                 if (!pos) continue;
                 
                 // Divisão por 4 cria listras mais grossas e realistas, iguais à imagem
@@ -1235,7 +1242,7 @@
                 context.beginPath();
                 first = true;
                 for (let i = segments - 1; i > 0; i--) {
-                    const pos = entity.history[i * entity.historySpacing];
+                    const pos = entity.history[i * spacing];
                     if (!pos) continue;
                     if (first) { context.moveTo(pos.x, pos.y); first = false; }
                     else { context.lineTo(pos.x, pos.y); }
