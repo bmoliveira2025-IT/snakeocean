@@ -866,12 +866,12 @@
             updateLeaderboard();
         });
 
-        socket.on('playerJoined', (player) => {
-            if (player.id !== myId) otherPlayers[player.id] = player;
+        socket.on('playerJoined', (p) => {
+            if (p.id !== player.id) otherPlayers[p.id] = p;
         });
 
         socket.on('playerUpdated', (data) => {
-            if (data.id === myId) return;
+            if (data.id === player.id) return;
             let p = otherPlayers[data.id];
             if (!p) {
                 otherPlayers[data.id] = data;
@@ -1737,6 +1737,7 @@
 
         // Preview
         const pCanvas_ = document.getElementById('preview-canvas');
+        pCanvas_.width = 200; pCanvas_.height = 100; // Garantir dimensões internas
         const pCtx_ = pCanvas_.getContext('2d');
         const pSnake = { x: -60, y: 50, angle: 0, radius: 15, length: 25, history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING, isTop1: false };
 
