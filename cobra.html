@@ -860,14 +860,18 @@
                 let b = bots.find(x => x.id === sb.id);
                 if (!b) {
                     sb.targetX = sb.x; sb.targetY = sb.y; sb.targetAngle = sb.angle;
-                    sb.history = [];
-                    const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
-                    // Histórico inicial realista
-                    for (let i = 0; i <= maxLen; i++) {
-                        sb.history.push({ 
-                            x: sb.x - Math.cos(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP, 
-                            y: sb.y - Math.sin(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP 
-                        });
+                    // Se o servidor enviou histórico, usamos; se não, inicializamos
+                    if (sb.history && sb.history.length > 0) {
+                        // Não limpamos o histórico do servidor!
+                    } else {
+                        sb.history = [];
+                        const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
+                        for (let i = 0; i <= maxLen; i++) {
+                            sb.history.push({ 
+                                x: sb.x - Math.cos(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP, 
+                                y: sb.y - Math.sin(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP 
+                            });
+                        }
                     }
                     bots.push(sb);
                 } else {
@@ -875,12 +879,16 @@
                     b.score = sb.score; b.length = sb.length; b.radius = sb.radius;
                     b.isBoosting = sb.isBoosting;
 
+                    // Sincronização suave
                     if (sb.history && b.history) {
                         for (let i = 0; i < sb.history.length; i++) {
                             let localIdx = i * 5; 
                             if (b.history[localIdx]) {
                                 b.history[localIdx].x += (sb.history[i].x - b.history[localIdx].x) * 0.1;
                                 b.history[localIdx].y += (sb.history[i].y - b.history[localIdx].y) * 0.1;
+                            } else if (i < 50) {
+                                // Se faltam pontos iniciais no local, preenchemos do servidor
+                                b.history[localIdx] = { x: sb.history[i].x, y: sb.history[i].y };
                             }
                         }
                     }
@@ -1433,8 +1441,8 @@
             }
             const spacing = customSpacing || GAME_CONFIG.SNAKE_HISTORY_SPACING;
             const segments = Math.floor(entity.length);
-            // IMPORTANTE: Só desenha o que temos no histórico
-            const availableSegments = Math.min(segments, Math.floor((entity.history.length - 1) / spacing));
+            // IMPORTANTE: Só desenha o que temos no histórico (mínimo de 1 para a cabeça ser visível)
+            const availableSegments = Math.max(1, Math.min(segments, Math.floor((entity.history.length - 1) / spacing)));
             const isHigh = qualityOpt === 'high';
 
             // PASS 1: Borda exterior
