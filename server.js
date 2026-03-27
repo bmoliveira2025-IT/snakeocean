@@ -170,7 +170,8 @@ setInterval(() => {
             const d = Math.hypot(bot.x - f.x, bot.y - f.y);
             if (d < bot.radius + f.radius) {
                 foods.splice(i, 1);
-                foods.push(spawnFood());
+                const newlySpawned = spawnFood();
+                foods.push(newlySpawned);
                 bot.length += GAME_CONFIG.GROWTH_PER_FOOD;
                 bot.score += GAME_CONFIG.SCORE_PER_FOOD;
                 
@@ -180,7 +181,7 @@ setInterval(() => {
                     GAME_CONFIG.SNAKE_INITIAL_RADIUS + (bot.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR
                 );
 
-                io.emit('foodEaten', { foodId: f.id, newFood: newFood });
+                io.emit('foodEaten', { foodId: f.id, newFood: newlySpawned });
                 break;
             }
         }
