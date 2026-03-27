@@ -138,10 +138,11 @@ function killBot(bot) {
     console.log(`Bot ${bot.name} (${bot.id}) morreu.`);
     dropDeathFood(bot);
 
-    // Manter na lista por 1000ms para o cliente ver o "encolhimento"
+    // Manter na lista por 1000ms para o cliente ver a morte (sem encolher agora)
+    bot.deathTimer = 1.0;
     io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
 
-    // Renascer um novo bot após 1 segundo (tempo de encolher)
+    // Renascer um novo bot após 1 segundo
     setTimeout(() => {
         const idx = bots.indexOf(bot);
         if (idx !== -1) bots.splice(idx, 1);
@@ -204,8 +205,8 @@ setInterval(() => {
 
     bots.forEach(bot => {
         if (bot.isDead) {
-            // Encolher gradualmente ao morrer (Efeito visual intencional)
-            bot.length = Math.max(0, bot.length - 1.5);
+            // Fader de morte (Efeito visual de sumir aos poucos sem encolher)
+            bot.deathTimer = Math.max(0, (bot.deathTimer || 1.0) - 0.04);
             return;
         }
         
@@ -327,7 +328,8 @@ setInterval(() => {
         skinIndex: b.skinIndex,
         length: b.length,
         isBoosting: b.isBoosting || false,
-        isDead: b.isDead || false  // <-- NOVO: Informar se está morrendo
+        isDead: b.isDead || false,
+        deathTimer: b.deathTimer !== undefined ? b.deathTimer : 1.0
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
