@@ -842,7 +842,13 @@
                     b.targetX = b.x; b.targetY = b.y; b.targetAngle = b.angle;
                     b.history = [];
                     const maxLen = Math.floor(b.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
-                    for (let i = 0; i <= maxLen; i++) b.history.push({ x: b.x, y: b.y });
+                    // Preencher histórico "esticado" para trás para ser visível imediatamente
+                    for (let i = 0; i <= maxLen; i++) {
+                        b.history.push({ 
+                            x: b.x - Math.cos(b.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP, 
+                            y: b.y - Math.sin(b.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP 
+                        });
+                    }
                     return b;
                 });
             }
@@ -856,7 +862,13 @@
                     sb.targetX = sb.x; sb.targetY = sb.y; sb.targetAngle = sb.angle;
                     sb.history = [];
                     const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
-                    for (let i = 0; i <= maxLen; i++) sb.history.push({ x: sb.x, y: sb.y });
+                    // Histórico inicial realista
+                    for (let i = 0; i <= maxLen; i++) {
+                        sb.history.push({ 
+                            x: sb.x - Math.cos(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP, 
+                            y: sb.y - Math.sin(sb.angle) * i * GAME_CONFIG.SNAKE_HISTORY_STEP 
+                        });
+                    }
                     bots.push(sb);
                 } else {
                     b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
@@ -1241,8 +1253,9 @@
                     if (!ent.lastX) { ent.lastX = ent.x; ent.lastY = ent.y; }
                     const distMoved = Math.hypot(ent.x - ent.lastX, ent.y - ent.lastY);
 
-                    if (distMoved > 0.1) {
-                        ent.distAccum = (ent.distAccum || 0) + distMoved;
+                    // Acumular distância sem limite mínimo (threshold) para garantir cauda sempre viva
+                    ent.distAccum = (ent.distAccum || 0) + distMoved;
+                    if (distMoved > 0.001) {
                         const vx = Math.cos(ent.angle);
                         const vy = Math.sin(ent.angle);
 
