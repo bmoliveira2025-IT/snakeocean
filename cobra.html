@@ -902,7 +902,12 @@
             // Explosão visual ao morrer
             spawnParticles(data.x, data.y, '#fff', 25);
             spawnParticles(data.x, data.y, '#ff00aa', 15);
-            camera.shake = 15;
+            
+            // Só tremer a tela se a morte for Perto da câmera
+            const dist = Math.hypot(data.x - camera.x, data.y - camera.y);
+            if (dist < 1800) {
+                camera.shake = Math.max(camera.shake, 15 * (1 - dist/1800));
+            }
         });
 
         socket.on('playerJoined', (p) => {
@@ -938,6 +943,8 @@
             p.length = data.length;
             p.radius = data.radius;
             p.isBoosting = data.isBoosting;
+            p.isDead = data.isDead; // Sync player death state
+            p.deathTimer = data.deathTimer; // Sync player death timer
             p.lastPacketTime = Date.now();
         });
 
@@ -1019,6 +1026,7 @@
             speed: GAME_CONFIG.SNAKE_BASE_SPEED,
             radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
             length: GAME_CONFIG.SNAKE_INITIAL_LENGTH,
+            targetLength: GAME_CONFIG.SNAKE_INITIAL_LENGTH,
             history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING,
             score: 0, boostCounter: 0, name: '', isTop1: false, distAccum: 0
         };
@@ -1300,6 +1308,9 @@
 
             const baseRadius = Math.min(GAME_CONFIG.SNAKE_MAX_RADIUS, GAME_CONFIG.SNAKE_INITIAL_RADIUS + (player.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR);
 
+            // Crescimento Suave (Damping) do corpo
+            player.length += (player.targetLength - player.length) * 0.1 * dt;
+
             const tx = (mouseX - canvas.width / 2) / camera.zoom + camera.x;
             const ty = (mouseY - canvas.height / 2) / camera.zoom + camera.y;
             const targetAngle = Math.atan2(ty - player.y, tx - player.x);
@@ -1322,7 +1333,7 @@
                 player.boostCounter += dt;
                 if (player.boostCounter > GAME_CONFIG.BOOST_FRAMES_PER_DROP) {
                     player.boostCounter = 0;
-                    player.length -= GAME_CONFIG.BOOST_LENGTH_LOSS;
+                    player.targetLength = Math.max(GAME_CONFIG.BOOST_MIN_LENGTH, player.targetLength - GAME_CONFIG.BOOST_LENGTH_LOSS);
                     player.score = Math.max(0, player.score - GAME_CONFIG.BOOST_SCORE_LOSS);
                     if (tail) foods.push(spawnFood(true, tail.x, tail.y));
                 }
@@ -1336,7 +1347,7 @@
             player.y += Math.sin(player.angle) * player.speed * dt;
 
             if (Math.sqrt((player.x - CENTER) ** 2 + (player.y - CENTER) ** 2) > CENTER - player.radius * 0.2) {
-                dropDeathFood(player); gameOver(); return;
+                dropDeathFood(player); playerDie(); return;
             }
 
             for (let bot of bots) {
@@ -1380,7 +1391,7 @@
                     let pts = f.isDeathFood ? GAME_CONFIG.DEATH_SCORE : GAME_CONFIG.SCORE_PER_FOOD;
                     spawnFloatingText(f.x, f.y, `+${pts}`, f.color);
 
-                    player.length += f.isDeathFood ? GAME_CONFIG.DEATH_GROWTH : GAME_CONFIG.GROWTH_PER_FOOD;
+                    player.targetLength += f.isDeathFood ? GAME_CONFIG.DEATH_GROWTH : GAME_CONFIG.GROWTH_PER_FOOD;
                     player.score += pts;
                     if (player.score > highScore) {
                         highScore = player.score;
@@ -1407,6 +1418,9 @@
             }
 
             liveScoreVal.innerText = Math.floor(player.score);
+
+            // Throttle Leaderboard Update para evitar trepidações na UI
+            if (now % 30 < 2) updateLeaderboard();
         }
 
         function updateLeaderboard() {

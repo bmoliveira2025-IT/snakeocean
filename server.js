@@ -138,16 +138,16 @@ function killBot(bot) {
     console.log(`Bot ${bot.name} (${bot.id}) morreu.`);
     dropDeathFood(bot);
 
-    // Manter na lista por 1000ms para o cliente ver a morte (sem encolher agora)
+    // Manter na lista por 2500ms para o cliente ver a morte (sem encolher agora)
     bot.deathTimer = 1.0;
     io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
 
-    // Renascer um novo bot após 1 segundo
+    // Renascer um novo bot após 2.5 segundos (tempo de sobra para o fade do cliente)
     setTimeout(() => {
         const idx = bots.indexOf(bot);
         if (idx !== -1) bots.splice(idx, 1);
         bots.push(createBot());
-    }, 1000);
+    }, 2500);
 }
 
 // Inicialização
@@ -331,6 +331,23 @@ setInterval(() => {
         isDead: b.isDead || false,
         deathTimer: b.deathTimer !== undefined ? b.deathTimer : 1.0
     })));
+
+    //Broadcast Jogadores (incluindo fantasmas morrendo)
+    Object.keys(players).forEach(id => {
+        const p = players[id];
+        if (p.isDead) {
+            p.deathTimer = Math.max(0, (p.deathTimer || 1.0) - 0.02);
+        }
+        io.emit('playerUpdated', {
+            id: p.id,
+            x: p.x, y: p.y, angle: p.angle,
+            score: p.score, length: p.length, radius: p.radius,
+            isBoosting: p.isBoosting,
+            isDead: p.isDead || false,
+            deathTimer: p.deathTimer !== undefined ? p.deathTimer : 1.0,
+            skinIndex: p.skinIndex
+        });
+    });
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
 // --- ROTAS E SOCKETS ---
@@ -400,20 +417,33 @@ io.on('connection', (socket) => {
 
     socket.on('playerDied', () => {
         const p = players[socket.id];
-        if (p) {
-            console.log(`Jogador ${p.name} morreu. Gerando resíduo.`);
+        if (p && !p.isDead) {
+            console.log(`Jogador ${p.name} morreu. Iniciando fade de 2.5s.`);
             dropDeathFood(p);
-            delete players[socket.id];
-            io.emit('playerLeft', socket.id);
+            p.isDead = true;
+            p.deathTimer = 1.0;
+            io.emit('botDied', { id: p.id, x: p.x, y: p.y }); // Usar o mesmo evento de explosão
+
+            setTimeout(() => {
+                delete players[socket.id];
+                io.emit('playerLeft', socket.id);
+            }, 2500);
         }
     });
 
     socket.on('disconnect', () => {
-        if (players[socket.id]) {
-            dropDeathFood(players[socket.id]);
-            delete players[socket.id];
+        const p = players[socket.id];
+        if (p) {
+            if (!p.isDead) {
+                dropDeathFood(p);
+                p.isDead = true;
+                p.deathTimer = 1.0;
+                setTimeout(() => {
+                    delete players[socket.id];
+                    io.emit('playerLeft', socket.id);
+                }, 2500);
+            }
         }
-        io.emit('playerLeft', socket.id);
     });
 });
 
