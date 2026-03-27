@@ -144,11 +144,40 @@ setInterval(() => {
     bots.forEach(bot => {
         // AI Simples e suave
         const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
-        if (distToCenter > CENTER - 400) {
+        
+        // 1. DESVIO DA BORDA (Mais agressivo)
+        if (distToCenter > CENTER - 350) {
             bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
-        } else if (--bot.aiTimer <= 0) {
-            bot.targetAngle += (Math.random() - 0.5) * 2;
-            bot.aiTimer = 40 + Math.random() * 60;
+        } else {
+            // 2. DESVIO DE OUTRAS COBRAS (Proximity Awareness)
+            const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE);
+            const gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
+            let nearestDist = 150;
+            let fleeAngle = null;
+
+            for (let x = -1; x <= 1; x++) {
+                for (let y = -1; y <= 1; y++) {
+                    const neighbors = spatialGrid[`${gx + x},${gy + y}`];
+                    if (neighbors) {
+                        neighbors.forEach(other => {
+                            if (other.id === bot.id) return;
+                            const d = Math.hypot(bot.x - other.x, bot.y - other.y);
+                            if (d < nearestDist) {
+                                nearestDist = d;
+                                fleeAngle = Math.atan2(bot.y - other.y, bot.x - other.x);
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (fleeAngle !== null) {
+                bot.targetAngle = fleeAngle;
+                bot.aiTimer = 10; // Focar no desvio
+            } else if (--bot.aiTimer <= 0) {
+                bot.targetAngle += (Math.random() - 0.5) * 2;
+                bot.aiTimer = 40 + Math.random() * 60;
+            }
         }
 
         let diff = bot.targetAngle - bot.angle;
@@ -164,7 +193,8 @@ setInterval(() => {
         if (bot.history.length > 300) bot.history.pop();
 
         // Colisões (Bordas)
-        if (distToCenter > CENTER - 20) {
+        if (distToCenter > CENTER - 50) {
+            console.log(`Bot ${bot.name} (${bot.id}) morreu: Tocou a borda.`);
             dropDeathFood(bot);
             Object.assign(bot, createBot());
         }
@@ -179,6 +209,7 @@ setInterval(() => {
                 if (neighbors) {
                     neighbors.forEach(other => {
                         if (other.id !== bot.id && checkCollision(bot, other)) {
+                            console.log(`Bot ${bot.name} (${bot.id}) morreu: Colidiu com ${other.name || other.id}`);
                             dropDeathFood(bot);
                             Object.assign(bot, createBot());
                         }
