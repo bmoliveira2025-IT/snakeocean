@@ -115,7 +115,8 @@ function createBot() {
         history: Array(Math.floor(initialLength * 5) + 10).fill({ x: pos.x, y: pos.y }),
         skinIndex: Math.floor(Math.random() * 10),
         aiTimer: 0,
-        speed: 7.2
+        speed: 7.2,
+        isDead: false
     };
 }
 
@@ -126,15 +127,13 @@ function killBot(bot) {
     console.log(`Bot ${bot.name} (${bot.id}) morreu.`);
     dropDeathFood(bot);
 
-    // Remover da lista de bots ativos
-    const idx = bots.indexOf(bot);
-    if (idx !== -1) {
-        bots.splice(idx, 1);
-        io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
-    }
+    // Manter na lista por 1000ms como "fantasma" para o cliente ver a morte
+    io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
 
     // Renascer um novo bot após 3 segundos
     setTimeout(() => {
+        const idx = bots.indexOf(bot);
+        if (idx !== -1) bots.splice(idx, 1);
         bots.push(createBot());
     }, 3000);
 }
@@ -193,6 +192,8 @@ setInterval(() => {
     updateSpatialGrid();
 
     bots.forEach(bot => {
+        if (bot.isDead) return; // Não processar bots mortos no loop de física
+        
         // AI Simples e suave
         const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
         
@@ -309,8 +310,9 @@ setInterval(() => {
         score: b.score,
         radius: Math.round(b.radius),
         skinIndex: b.skinIndex,
-        length: b.length,          // <-- A CORREÇÃO ESTÁ AQUI
-        isBoosting: b.isBoosting || false
+        length: b.length,
+        isBoosting: b.isBoosting || false,
+        isDead: b.isDead || false  // <-- NOVO: Informar se está morrendo
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
