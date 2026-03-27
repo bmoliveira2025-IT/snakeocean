@@ -163,16 +163,15 @@ function killBot(bot) {
     console.log(`Bot ${bot.name} (${bot.id}) morreu.`);
     dropDeathFood(bot);
 
-    // Manter na lista por 2500ms para o cliente ver a morte (sem encolher agora)
-    bot.deathTimer = 1.0;
     io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
 
-    // Renascer um novo bot após 2.5 segundos (tempo de sobra para o fade do cliente)
+    // Remover e renascer um novo bot rapidamente
+    const idx = bots.indexOf(bot);
+    if (idx !== -1) bots.splice(idx, 1);
+    
     setTimeout(() => {
-        const idx = bots.indexOf(bot);
-        if (idx !== -1) bots.splice(idx, 1);
         bots.push(createBot());
-    }, 2500);
+    }, 500);
 }
 
 // Inicialização
@@ -432,31 +431,21 @@ io.on('connection', (socket) => {
     socket.on('playerDied', () => {
         const p = players[socket.id];
         if (p && !p.isDead) {
-            console.log(`Jogador ${p.name} morreu. Iniciando fade de 2.5s.`);
             dropDeathFood(p);
-            p.isDead = true;
-            p.deathTimer = 1.0;
-            io.emit('botDied', { id: p.id, x: p.x, y: p.y }); // Usar o mesmo evento de explosão
+            io.emit('botDied', { id: p.id, x: p.x, y: p.y }); 
 
-            setTimeout(() => {
-                delete players[socket.id];
-                io.emit('playerLeft', socket.id);
-            }, 2500);
+            // Remover Imediatamente para evitar animação residual
+            delete players[socket.id];
+            io.emit('playerLeft', socket.id);
         }
     });
 
     socket.on('disconnect', () => {
         const p = players[socket.id];
-        if (p) {
-            if (!p.isDead) {
-                dropDeathFood(p);
-                p.isDead = true;
-                p.deathTimer = 1.0;
-                setTimeout(() => {
-                    delete players[socket.id];
-                    io.emit('playerLeft', socket.id);
-                }, 2500);
-            }
+        if (p && !p.isDead) {
+            dropDeathFood(p);
+            delete players[socket.id];
+            io.emit('playerLeft', socket.id);
         }
     });
 });

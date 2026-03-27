@@ -870,7 +870,6 @@
         });
 
         socket.on('botsUpdated', (serverBots) => {
-            // Sincronização inteligente: manter bots que estão morrendo mesmo se sumirem do server packet
             serverBots.forEach(sb => {
                 let b = bots.find(x => x.id === sb.id);
                 if (b) {
@@ -894,12 +893,8 @@
                 }
             });
 
-            // Remover apenas se sumiu do server E não está mais na fase de "ghost" (morte)
-            bots = bots.filter(b => {
-                const stillInServer = serverBots.find(sb => sb.id === b.id);
-                if (stillInServer) return true;
-                return b.isDead && b.deathTimer > 0; // Manter enquanto estiver em fade-out
-            });
+            // Remover Imediatamente como solicitado (Sem animação)
+            bots = bots.filter(b => serverBots.find(sb => sb.id === b.id));
             updateLeaderboard();
         });
 
