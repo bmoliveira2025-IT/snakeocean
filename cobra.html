@@ -741,7 +741,7 @@
             SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
             SNAKE_HISTORY_STEP: 1,            // Precisão da física
             SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
-            SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players
+            SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players (SINCRIZADO)
 
             SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
             SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
@@ -763,10 +763,10 @@
 
             NUM_BOTS: 15,                     // Um pouco mais de bots para preencher o mapa
             SPAWN_DELAY: 100,
-            SPAWN_SAFE_RADIUS: 2500,          // ⚠️ Aumentado drasticamente: ninguém vê o spawn
-            BOT_SPEED_MULTIPLIER_MOBILE: 1.0, // ⚠️ Removida penalidade (mesma velocidade sempre)
-            BOT_VISION_RADIUS: 1500,          // ⚠️ IA melhorada: visão ao longe para não colidir
-            BOT_AVOID_RADIUS_MULT: 8,         // ⚠️ IA foge de colisões mais depressa
+            SPAWN_SAFE_RADIUS: 2500,          // Mantido para spawn longe
+            BOT_SPEED_MULTIPLIER_MOBILE: 1.0, // Sincronizado com server
+            BOT_VISION_RADIUS: 1500,          // Sincronizado com server
+            BOT_AVOID_RADIUS_MULT: 8,         // Sincronizado com server
 
             CAMERA_BASE_ZOOM: 1.0,            // Zoom padrão
             CAMERA_MIN_ZOOM: 1.0,             // Zoom out máximo
@@ -870,31 +870,36 @@
         });
 
         socket.on('botsUpdated', (serverBots) => {
+            // Sincronização inteligente: manter bots que estão morrendo mesmo se sumirem do server packet
             serverBots.forEach(sb => {
                 let b = bots.find(x => x.id === sb.id);
-                if (!b) {
-                    // Inicializar bot NOVO
-                    b = { ...sb };
-                    b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
-                    b.history = [];
-                    const initialLen = Math.floor((sb.length || 26) * 5) + 50;
-                    for (let i = 0; i <= initialLen; i++) {
-                        b.history.push({
-                            x: sb.x - Math.cos(sb.angle) * i,
-                            y: sb.y - Math.sin(sb.angle) * i
-                        });
-                    }
-                    bots.push(b);
-                } else {
+                if (b) {
                     // Atualizar bot EXISTENTE
                     b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
                     b.score = sb.score; b.length = sb.length; b.radius = sb.radius || b.radius;
                     b.isBoosting = sb.isBoosting;
                     b.isDead = sb.isDead;
                     b.deathTimer = sb.deathTimer;
+                } else {
+                    // Inicializar bot NOVO
+                    const initialLen = Math.floor((sb.length || 26) * 5) + 30;
+                    bots.push({
+                        ...sb,
+                        x: sb.x, y: sb.y,
+                        targetX: sb.x, targetY: sb.y,
+                        targetAngle: sb.angle,
+                        history: Array(initialLen).fill({ x: sb.x, y: sb.y }),
+                        deathTimer: sb.deathTimer || 1.0
+                    });
                 }
             });
-            bots = bots.filter(b => serverBots.find(sb => sb.id === b.id));
+
+            // Remover apenas se sumiu do server E não está mais na fase de "ghost" (morte)
+            bots = bots.filter(b => {
+                const stillInServer = serverBots.find(sb => sb.id === b.id);
+                if (stillInServer) return true;
+                return b.isDead && b.deathTimer > 0; // Manter enquanto estiver em fade-out
+            });
             updateLeaderboard();
         });
 

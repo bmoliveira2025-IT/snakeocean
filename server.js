@@ -12,19 +12,44 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // Configurações do Jogo
+// Configurações do Jogo (Sincronizadas com o Cliente)
 const GAME_CONFIG = {
-    WORLD_SIZE: 8000,
-    TOTAL_FOOD: 1500,
-    NUM_BOTS: 30,
-    SNAKE_BASE_SPEED: 3.0,
-    GROWTH_PER_FOOD: 0.5,
-    SCORE_PER_FOOD: 10,
-    SNAKE_INITIAL_LENGTH: 26,
-    SNAKE_INITIAL_RADIUS: 20,
-    SNAKE_MAX_RADIUS: 36,
-    WIDTH_GROWTH_FACTOR: 0.05,
-    SERVER_TICK_RATE: 25, // 40ms interval
-    GRID_SIZE: 400 // Tamanho de cada célula para o sistema de colisão otimizado
+    WORLD_SIZE: 9000,                 // Tamanho total da arena
+    TOTAL_FOOD: 1500,                 // Quantidade máxima de comida normal
+
+    SNAKE_INITIAL_LENGTH: 30,         // Tamanho inicial
+    SNAKE_INITIAL_RADIUS: 26,         // Grossura inicial
+    SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
+    SNAKE_HISTORY_STEP: 1,            // Precisão da física
+    SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
+    SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players
+
+    SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
+    SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
+    SNAKE_TURN_SPEED_BOOST: 0.015,    // Rapidez de curva ao correr
+
+    GROWTH_PER_FOOD: 1.0,             // Crescimento por comida normal
+    SCORE_PER_FOOD: 8,               // Pontos por comida normal
+    DEATH_GROWTH: 0.50,               // Crescimento por comida da morte
+    DEATH_SCORE: 30,                  // Pontos por comida da morte
+    WIDTH_GROWTH_FACTOR: 0.10,        // Fator de engordamento
+    MAGNET_STRENGTH: 0.3,             // Atração da comida (desativado)
+    MAGNET_RADIUS_MULT: 3.0,          // Área da atração
+
+    BOOST_SPEED_MULT: 2.0,            // Multiplicador de velocidade ao correr
+    BOOST_SCORE_LOSS: 2,              // Perda de score contínua
+    BOOST_LENGTH_LOSS: 0.2,           // Encolhimento do corpo contínuo
+    BOOST_MIN_LENGTH: 10,             // Tamanho mínimo para usar boost
+    BOOST_FRAMES_PER_DROP: 2,         // Comida expelida a cada X frames
+
+    NUM_BOTS: 30,                     // Um pouco mais de bots para preencher o mapa
+    SPAWN_DELAY: 100,
+    SPAWN_SAFE_RADIUS: 2500,          // ⚠️ Aumentado drasticamente: ninguém vê o spawn
+    BOT_VISION_RADIUS: 1500,          // ⚠️ IA melhorada: visão ao longe para não colidir
+    BOT_AVOID_RADIUS_MULT: 8,         // ⚠️ IA foge de colisões mais depressa
+
+    SERVER_TICK_RATE: 25,             // 40ms interval (25 FPS sync)
+    GRID_SIZE: 450                    // Grid de colisão otimizado
 };
 
 const CENTER = GAME_CONFIG.WORLD_SIZE / 2;
@@ -126,7 +151,7 @@ function createBot() {
         history: Array(Math.floor(initialLength * 5) + 10).fill({ x: pos.x, y: pos.y }),
         skinIndex: Math.floor(Math.random() * 10),
         aiTimer: 0,
-        speed: 7.2,
+        speed: GAME_CONFIG.SNAKE_BASE_SPEED,
         isDead: false
     };
 }
@@ -205,57 +230,49 @@ setInterval(() => {
 
     bots.forEach(bot => {
         if (bot.isDead) {
-            // Fader de morte (Efeito visual de sumir aos poucos sem encolher)
             bot.deathTimer = Math.max(0, (bot.deathTimer || 1.0) - 0.04);
             return;
         }
         
-        // AI Simples e suave
         const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
         
-        // 1. DESVIO DA BORDA (Mais agressivo)
+        let fleeAngle = null;
         if (distToCenter > CENTER - 350) {
-            bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
+            // Fuga da borda
+            fleeAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
         } else {
-            // 2. DESVIO DE OUTRAS COBRAS (Body Awareness)
+            // Desvio de outras cobras
+            const visionRadius = GAME_CONFIG.BOT_VISION_RADIUS;
             const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE);
             const gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
-            let nearestDist = 200; // Visão de 200px
-            let fleeAngle = null;
 
             for (let x = -1; x <= 1; x++) {
                 for (let y = -1; y <= 1; y++) {
                     const neighbors = spatialGrid[`${gx + x},${gy + y}`];
                     if (neighbors) {
-                        neighbors.forEach(other => {
-                            if (other.id === bot.id) return;
-                            
-                            // Checar não só a cabeça, mas um pouco do rastro para evitar "corpo"
-                            // Checamos a cabeça e os primeiros 10 segmentos (50px de corpo)
-                            const pointsToCheck = [
-                                {x: other.x, y: other.y},
-                                ...(other.history ? other.history.slice(0, 10) : [])
-                            ];
-
-                            pointsToCheck.forEach(p => {
-                                const d = Math.hypot(bot.x - p.x, bot.y - p.y);
-                                if (d < nearestDist) {
-                                    nearestDist = d;
-                                    fleeAngle = Math.atan2(bot.y - p.y, bot.x - p.x);
+                        for (let other of neighbors) {
+                            if (other.id === bot.id || !other.history) continue;
+                            for (let i = 0; i < other.history.length; i += 10) {
+                                const seg = other.history[i];
+                                if (Math.hypot(bot.x - seg.x, bot.y - seg.y) < visionRadius) {
+                                    fleeAngle = Math.atan2(bot.y - seg.y, bot.x - seg.x);
+                                    break;
                                 }
-                            });
-                        });
+                            }
+                            if (fleeAngle !== null) break;
+                        }
                     }
+                    if (fleeAngle !== null) break;
                 }
             }
+        }
 
-            if (fleeAngle !== null) {
-                bot.targetAngle = fleeAngle;
-                bot.aiTimer = 10; // Focar no desvio
-            } else if (--bot.aiTimer <= 0) {
-                bot.targetAngle += (Math.random() - 0.5) * 2;
-                bot.aiTimer = 40 + Math.random() * 60;
-            }
+        if (fleeAngle !== null) {
+            bot.targetAngle = fleeAngle;
+            bot.aiTimer = 10;
+        } else if (--bot.aiTimer <= 0) {
+            bot.targetAngle += (Math.random() - 0.5) * 2;
+            bot.aiTimer = 40 + Math.random() * 60;
         }
 
         let diff = bot.targetAngle - bot.angle;
@@ -266,13 +283,10 @@ setInterval(() => {
         bot.x += Math.cos(bot.angle) * bot.speed;
         bot.y += Math.sin(bot.angle) * bot.speed;
 
-        // Histórico otimizado
         bot.history.unshift({ x: bot.x, y: bot.y });
         if (bot.history.length > 300) bot.history.pop();
 
-        // Colisões (Bordas)
         if (distToCenter > CENTER - 50) {
-            console.log(`Bot ${bot.name} (${bot.id}) morreu: Tocou a borda.`);
             killBot(bot);
         }
 
