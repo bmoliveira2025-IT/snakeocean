@@ -1216,7 +1216,7 @@
         let lastLoopTime = performance.now();
 
         function update() {
-            if (gameState !== 'PLAYING') return;
+            if (gameState !== 'PLAYING' && gameState !== 'DYING') return;
 
             const nowTime = performance.now();
             const dt = (nowTime - lastLoopTime) / 16.667;
@@ -1709,6 +1709,25 @@
             });
             ctx.globalAlpha = 1.0;
 
+            // Overlay de morte (DYING state)
+            if (gameState === 'DYING') {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // Resetar transform para UI
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 60px Outfit, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 15; ctx.shadowColor = '#ff0000';
+                ctx.fillText('ELIMINADO', canvas.width / 2, canvas.height / 2);
+                
+                ctx.font = 'bold 20px Outfit, sans-serif';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.fillText('Preparando Hall...', canvas.width / 2, canvas.height / 2 + 50);
+                ctx.restore();
+            }
+
             ctx.restore();
 
             if (gameState === 'PLAYING') {
@@ -1751,8 +1770,19 @@
         }
 
         function playerDie() {
+            if (gameState === 'DYING') return; // Evitar múltiplas chamadas
             socket.emit('die');
-            gameOver();
+            gameState = 'DYING';
+            camera.shake = 30;
+
+            // Criar explosão maior no ponto da morte do jogador
+            spawnParticles(player.x, player.y, '#fff', 30);
+            spawnParticles(player.x, player.y, '#ff0000', 20);
+
+            // Aguardar 3 segundos assistindo o mapa antes de voltar ao hall
+            setTimeout(() => {
+                gameOver();
+            }, 3000);
         }
 
         const pCanvas_ = document.getElementById('preview-canvas');
