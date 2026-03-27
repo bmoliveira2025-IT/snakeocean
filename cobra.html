@@ -841,7 +841,8 @@
                 otherPlayers[data.id] = data;
                 return;
             }
-            // Suavização: Definir alvos em vez de saltar
+            
+            // Suavização da cabeça
             p.targetX = data.x;
             p.targetY = data.y;
             p.targetAngle = data.angle;
@@ -851,9 +852,17 @@
             p.radius = data.radius;
             p.isBoosting = data.isBoosting;
             
-            // Reconciliação de histórico: apenas se estiver muito longe ou se o servidor mudou muito
-            // Para simplicidade, atualizamos o histórico, mas a interpolação da cabeça suaviza o visual
-            p.history = data.history;
+            // Suavização do corpo: em vez de substituir, atualizamos os alvos das coordenadas
+            if (p.history && data.history && p.history.length === data.history.length) {
+                for(let i=0; i<p.history.length; i++) {
+                    p.history[i].tx = data.history[i].x;
+                    p.history[i].ty = data.history[i].y;
+                }
+            } else {
+                // Se o tamanho mudou, aceitamos o salto uma vez
+                p.history = data.history;
+            }
+            
             p.lastPacketTime = Date.now();
         });
 
@@ -1248,9 +1257,9 @@
             // Server should ideally handle this, but for now client-side check if someone else ate it is too slow.
             // We rely on 'foodEaten' event above.
 
-            // Send local state to server (Throttled to ~20Hz for bandwidth efficiency)
+            // Send local state to server (Throttled to ~25Hz for higher precision)
             const now = Date.now();
-            if (now - lastUpdateTime > 50) {
+            if (now - lastUpdateTime > 40) {
                 lastUpdateTime = now;
                 socket.emit('update', {
                     x: player.x,
@@ -1269,8 +1278,9 @@
             for (let id in otherPlayers) {
                 let p = otherPlayers[id];
                 if (p.targetX !== undefined) {
-                    // Mover suavemente para o alvo (interpolação)
-                    const lerpFactor = 0.15;
+                    // Fator de suavização (0.1 = muito suave, 0.3 = mais responsivo)
+                    const lerpFactor = 0.12;
+                    
                     p.x += (p.targetX - p.x) * lerpFactor;
                     p.y += (p.targetY - p.y) * lerpFactor;
                     
@@ -1279,21 +1289,14 @@
                     while (aDiff > Math.PI) aDiff -= Math.PI * 2;
                     p.angle += aDiff * lerpFactor;
 
-                    // Simulação local do histórico entre pacotes para evitar "corpo quebrado"
-                    const curSpeed = (p.isBoosting ? 1.8 : 1.0) * GAME_CONFIG.SNAKE_BASE_SPEED_PC; // Estimativa
-                    const pVx = Math.cos(p.angle);
-                    const pVy = Math.sin(p.angle);
-                    p.distAccum = (p.distAccum || 0) + curSpeed;
-                    
-                    while (p.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
-                        p.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
-                        p.history.unshift({ 
-                            x: p.x - pVx * p.distAccum, 
-                            y: p.y - pVy * p.distAccum 
-                        });
-                    }
-                    if (p.history.length > Math.floor(p.length * spacing) + 5) {
-                        p.history.length = Math.floor(p.length * spacing) + 5;
+                    // Suavizar o corpo também (ponto a ponto)
+                    if (p.history) {
+                        for (let seg of p.history) {
+                            if (seg.tx !== undefined) {
+                                seg.x += (seg.tx - seg.x) * lerpFactor;
+                                seg.y += (seg.ty - seg.y) * lerpFactor;
+                            }
+                        }
                     }
                 }
             }
