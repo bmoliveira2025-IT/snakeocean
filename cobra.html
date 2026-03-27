@@ -820,15 +820,50 @@
         const otherPlayers = {};
 
         socket.on('init', (data) => {
-            myId = data.id;
+            player.id = data.id;
             // Clear and sync players
             Object.keys(otherPlayers).forEach(id => delete otherPlayers[id]);
             Object.keys(data.players).forEach(id => {
-                if (id !== myId) otherPlayers[id] = data.players[id];
+                if (id !== player.id) otherPlayers[id] = data.players[id];
             });
             // Sync food
             foods.length = 0;
-            data.foods.forEach(f => foods.push(f));
+            if (data.foods) foods.push(...data.foods);
+
+            if (data.bots) {
+                bots = data.bots.map(b => {
+                    b.targetX = b.x; b.targetY = b.y; b.targetAngle = b.angle;
+                    return b;
+                });
+            }
+            updateLeaderboard();
+        });
+
+        socket.on('botsUpdated', (serverBots) => {
+            // Sincronizar bots do servidor
+            serverBots.forEach(sb => {
+                let b = bots.find(x => x.id === sb.id);
+                if (!b) {
+                    sb.targetX = sb.x; sb.targetY = sb.y; sb.targetAngle = sb.angle;
+                    bots.push(sb);
+                } else {
+                    b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
+                    b.score = sb.score; b.length = sb.length; b.radius = sb.radius;
+                    // Sincronizar histórico básico para renderização
+                    if (sb.history) {
+                        if (!b.history || b.history.length !== sb.history.length) b.history = sb.history;
+                        else {
+                            for(let i=0; i<sb.history.length; i++) {
+                                b.history[i].tx = sb.history[i].x;
+                                b.history[i].ty = sb.history[i].y;
+                            }
+                        }
+                    }
+                }
+            });
+            // Remover bots que não estão mais no servidor
+            bots = bots.filter(b => serverBots.find(sb => sb.id === b.id));
+            updateLeaderboard();
         });
 
         socket.on('playerJoined', (player) => {
@@ -951,7 +986,7 @@
         };
         const foods = [];
 
-        const bots = [];
+        let bots = []; // Agora preenchido pelo servidor
         let spawnTimer = 20;
 
         function getSafePosition(ignoreSelf = false) {
@@ -1345,109 +1380,8 @@
 
             liveScoreVal.innerText = Math.floor(player.score);
 
-            // --- FÍSICA DOS BOTS (AI REAL) ---
-            bots.forEach((bot, idx) => {
-                let targetX = null, targetY = null;
-                const distToPlayer = Math.hypot(bot.x - player.x, bot.y - player.y);
-
-                bot.isBoosting = false;
-                if (bot.behavior === 'aggressive' && player.length < bot.length && distToPlayer < GAME_CONFIG.BOT_VISION_RADIUS) {
-                    targetX = player.x; targetY = player.y;
-                    if (distToPlayer < 400 && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) bot.isBoosting = true;
-                } else if (bot.behavior === 'coward' && player.length > bot.length && distToPlayer < GAME_CONFIG.BOT_VISION_RADIUS) {
-                    targetX = bot.x - (player.x - bot.x); targetY = bot.y - (player.y - bot.y);
-                    if (distToPlayer < 400 && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) bot.isBoosting = true;
-                } else if (bot.behavior === 'wander') {
-                    if (--bot.aiTimer <= 0) { bot.targetAngle += (Math.random() - 0.5) * 2; bot.aiTimer = 60; }
-                }
-
-                if (!targetX && bot.behavior !== 'wander') {
-                    let nearest = null; let minD = 500 * 500;
-                    for (let i = 0; i < foods.length; i += 10) {
-                        const f = foods[i]; const dSq = (bot.x - f.x) ** 2 + (bot.y - f.y) ** 2;
-                        if (dSq < minD) { minD = dSq; nearest = f; }
-                    }
-                    if (nearest) { targetX = nearest.x; targetY = nearest.y; }
-                    else if (--bot.aiTimer <= 0) { bot.targetAngle += (Math.random() - 0.5); bot.aiTimer = 60; }
-                }
-
-                if (targetX !== null) {
-                    bot.targetAngle = Math.atan2(targetY - bot.y, targetX - bot.x);
-                }
-
-                const avoid = (other) => {
-                    for (let i = 0; i < other.history.length; i += other.historySpacing * 2) {
-                        const s = other.history[i]; if (!s) continue;
-                        if ((bot.x - s.x) ** 2 + (bot.y - s.y) ** 2 < (bot.radius * GAME_CONFIG.BOT_AVOID_RADIUS_MULT) ** 2) {
-                            bot.targetAngle = Math.atan2(bot.y - s.y, bot.x - s.x); bot.isBoosting = true; return true;
-                        }
-                    }
-                    return false;
-                };
-                if (!avoid(player)) { for (let b of bots) if (b.id !== bot.id && avoid(b)) break; }
-                if (Math.sqrt((bot.x - CENTER) ** 2 + (bot.y - CENTER) ** 2) > CENTER - 800) bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
-
-                let bDiff = bot.targetAngle - bot.angle; while (bDiff < -Math.PI) bDiff += Math.PI * 2; while (bDiff > Math.PI) bDiff -= Math.PI * 2;
-
-                const bDamp = Math.max(0.6, 1 - (bot.length - 20) * 0.001);
-                bot.angle += bDiff * (bot.isBoosting ? GAME_CONFIG.SNAKE_TURN_SPEED_BOOST : GAME_CONFIG.SNAKE_TURN_SPEED) * bDamp;
-
-                const botMobileNerf = isTouch ? GAME_CONFIG.BOT_SPEED_MULTIPLIER_MOBILE : 1.0;
-                const bSpeedBase = bot.normalSpeed * botMobileNerf;
-                const curSpd = (bot.isBoosting && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) ? (bSpeedBase * GAME_CONFIG.BOOST_SPEED_MULT) : bSpeedBase;
-
-                bot.x += Math.cos(bot.angle) * curSpd; bot.y += Math.sin(bot.angle) * curSpd;
-
-                if (bot.isBoosting && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) {
-                    const tail = bot.history[Math.floor(bot.length * bot.historySpacing)];
-                    if (tail && Math.random() < 0.4) spawnSpark(tail.x, tail.y, bot.angle);
-
-                    if (++bot.boostCounter > GAME_CONFIG.BOOST_FRAMES_PER_DROP) {
-                        bot.boostCounter = 0; bot.length -= GAME_CONFIG.BOOST_LENGTH_LOSS; bot.score = Math.max(0, bot.score - GAME_CONFIG.BOOST_SCORE_LOSS);
-                        if (tail) foods.push(spawnFood(true, tail.x, tail.y));
-                    }
-                } else { bot.boostCounter = 0; }
-
-                let died = Math.sqrt((bot.x - CENTER) ** 2 + (bot.y - CENTER) ** 2) > CENTER - bot.radius * 0.2;
-                if (!died) died = checkPerfectCollision(bot.x, bot.y, bot.radius, bot.angle, player);
-                if (!died) {
-                    for (let b of bots) {
-                        if (b.id !== bot.id && checkPerfectCollision(bot.x, bot.y, bot.radius, bot.angle, b)) { died = true; break; }
-                    }
-                }
-
-                if (died) {
-                    dropDeathFood(bot);
-                    bots.splice(idx, 1); return;
-                }
-
-                const bVx = Math.cos(bot.angle);
-                const bVy = Math.sin(bot.angle);
-                bot.distAccum = (bot.distAccum || 0) + curSpd;
-                while (bot.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
-                    bot.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
-                    bot.history.unshift({ x: bot.x - bVx * bot.distAccum, y: bot.y - bVy * bot.distAccum });
-                }
-                bot.history.length = Math.min(bot.history.length, Math.floor(bot.length * bot.historySpacing) + 1);
-                bot.radius = Math.min(GAME_CONFIG.SNAKE_MAX_RADIUS, GAME_CONFIG.SNAKE_INITIAL_RADIUS + (bot.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR);
-
-                const bMagnet = bot.radius * GAME_CONFIG.MAGNET_RADIUS_MULT;
-                for (let i = foods.length - 1; i >= 0; i -= 2) {
-                    const f = foods[i]; const dSq = (bot.x - f.x) ** 2 + (bot.y - f.y) ** 2;
-                    if (dSq < (bot.radius + f.radius) ** 2) {
-                        foods.splice(i, 1);
-                        spawnParticles(f.x, f.y, f.color, f.isDeathFood ? 10 : 5);
-                        bot.length += f.isDeathFood ? GAME_CONFIG.DEATH_GROWTH : GAME_CONFIG.GROWTH_PER_FOOD;
-                        bot.score += f.isDeathFood ? GAME_CONFIG.DEATH_SCORE : GAME_CONFIG.SCORE_PER_FOOD;
-                    }
-                    else if (dSq < bMagnet ** 2) { f.x += (bot.x - f.x) * 0.06; f.y += (bot.y - f.y) * 0.06; }
-                }
-            });
-
-            if (bots.length < GAME_CONFIG.NUM_BOTS && --spawnTimer <= 0) {
-                bots.push(createBot()); spawnTimer = GAME_CONFIG.SPAWN_DELAY;
-            }
-            while (foods.length < GAME_CONFIG.TOTAL_FOOD) foods.push(spawnFood());
+            // Lógica de Bots removida do cliente (agora processada no servidor)
+            // while (foods.length < GAME_CONFIG.TOTAL_FOOD) foods.push(spawnFood());
         }
 
         function updateLeaderboard() {
@@ -1698,7 +1632,26 @@
             ctx.shadowBlur = 0;
 
             // Bots, Outros Jogadores e Jogador Local
-            bots.forEach(bot => drawSnake(ctx, bot, bot.skin, bot.isBoosting && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH));
+            bots.forEach(bot => {
+                // Suavização simples para bots sincronizados
+                const lf = 0.2;
+                if (bot.targetX !== undefined) {
+                    bot.x += (bot.targetX - bot.x) * lf;
+                    bot.y += (bot.targetY - bot.y) * lf;
+                    let aD = bot.targetAngle - bot.angle;
+                    while(aD < -Math.PI) aD += Math.PI * 2; while(aD > Math.PI) aD -= Math.PI * 2;
+                    bot.angle += aD * lf;
+                    if (bot.history) {
+                        bot.history.forEach(seg => {
+                            if (seg.tx !== undefined) {
+                                seg.x += (seg.tx - seg.x) * lf;
+                                seg.y += (seg.ty - seg.y) * lf;
+                            }
+                        });
+                    }
+                }
+                drawSnake(ctx, bot, skins[bot.skinIndex || 0], bot.isBoosting);
+            });
             Object.values(otherPlayers).forEach(p => {
                 drawSnake(ctx, p, skins[p.skinIndex || 0], p.isBoosting);
             });
@@ -1851,23 +1804,23 @@
             camera.x = player.x; camera.y = player.y; camera.shake = 0;
 
             foods.length = 0; particles.length = 0; floatingTexts.length = 0; sparks.length = 0;
-            for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) foods.push(spawnFood());
-
-            bots.length = 0;
+            // O servidor já enviou a comida inicial no 'init'
+ 
+            // bots.length = 0; // Geridos pelo servidor agora
             spawnTimer = GAME_CONFIG.SPAWN_DELAY;
-            for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) bots.push(createBot());
-
+            // for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) bots.push(createBot());
+ 
             mouseX = canvas.width / 2; mouseY = canvas.height / 2;
             isMouseDown = false;
-
+ 
             gameState = 'PLAYING';
-
+ 
             // Join server
             socket.emit('join', {
                 name: player.name,
                 skinIndex: currentSkinIndex
             });
-
+ 
             startScreen.style.display = 'none';
             leaderboardContainer.style.display = 'block';
             liveHud.style.display = 'block';
