@@ -29,13 +29,23 @@ const GAME_CONFIG = {
     SNAKE_TURN_SPEED: 0.035,
     SNAKE_TURN_SPEED_BOOST: 0.015,
 
+    // --- PROPORÇÃO MATEMÁTICA ABSOLUTA (1.0 de Crescimento = 8.0 de Score) ---
     GROWTH_PER_FOOD: 1.0,
     SCORE_PER_FOOD: 8,
-    DEATH_GROWTH: 0.50,
+    DEATH_GROWTH: 3.75,               // (30 / 8 = 3.75) Tamanho 100% proporcional aos pontos!
     DEATH_SCORE: 30,
 
     WIDTH_GROWTH_FACTOR: 1.5,
     MAX_HISTORY_LENGTH: 1500,
+
+    // Sincronização do Boost para evitar o ecrã divergir da pontuação
+    BOOST_SPEED_MULT: 2.0,
+    BOOST_SCORE_LOSS: 2,
+    BOOST_LENGTH_LOSS: 0.25,          // (2 / 8 = 0.25)
+    BOOST_MIN_LENGTH: 30,             // O jogador não pode usar boost se for menor que o tamanho inicial
+
+    MAGNET_STRENGTH: 0.3,
+    MAGNET_RADIUS_MULT: 3.0,
 
     NUM_BOTS: 30,
     SPAWN_SAFE_RADIUS: 2500,
@@ -296,7 +306,6 @@ setInterval(() => {
         }
     });
 
-    // CORREÇÃO 1: Bot envia floats reais (com 2 casas decimais) para evitar congelamentos matemáticos!
     io.emit('botsUpdated', bots.map(b => ({
         id: b.id, name: b.name,
         x: parseFloat(b.x.toFixed(2)),
@@ -310,8 +319,6 @@ setInterval(() => {
         isDead: b.isDead || false
     })));
 
-    // NOTA: Os jogadores reais JÁ NÃO SÃO emitidos neste loop a 25fps. 
-    // Eles são repassados individualmente na função socket.on('update') (abaixo).
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
 // --- ROTAS E SOCKETS ---
@@ -329,7 +336,6 @@ io.on('connection', (socket) => {
         };
         socket.emit('init', { id: socket.id, players, foods, config: GAME_CONFIG });
 
-        // CORREÇÃO 2: Avisar os outros jogadores do mapa que entrámos! (Caso contrário éramos invisíveis até nos mexermos)
         socket.broadcast.emit('playerJoined', players[socket.id]);
     });
 
@@ -367,7 +373,6 @@ io.on('connection', (socket) => {
                 if (p.history.length > targetLen) p.history.length = targetLen;
             }
 
-            // CORREÇÃO 3: Enviar a nossa posição real de imediato (Float sem arredondamento), e apenas quando mexemos!
             socket.broadcast.emit('playerUpdated', {
                 id: p.id,
                 x: parseFloat(p.x.toFixed(2)),
