@@ -18,11 +18,11 @@ const GAME_CONFIG = {
     TOTAL_FOOD: 1500,                 // Quantidade máxima de comida normal
 
     SNAKE_INITIAL_LENGTH: 30,         // Tamanho inicial
-    SNAKE_INITIAL_RADIUS: 26,         // Grossura inicial
-    SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
+    SNAKE_INITIAL_RADIUS: 18,         // Afinado para um início mais ágil (Sincronizado)
+    SNAKE_MAX_RADIUS: 55,             // Limite máximo de grossura (Sincronizado)
     SNAKE_HISTORY_STEP: 1,            // Precisão da física
     SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
-    SNAKE_BASE_SPEED: 4.0,            // Velocidade IGUAL para bots e players (AUMENTADO)
+    SNAKE_BASE_SPEED: 4.0,            // Velocidade IGUAL para bots e players (Sincronizado)
 
     SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
     SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
@@ -32,7 +32,7 @@ const GAME_CONFIG = {
     SCORE_PER_FOOD: 8,               // Pontos por comida normal
     DEATH_GROWTH: 0.50,               // Crescimento por comida da morte
     DEATH_SCORE: 30,                  // Pontos por comida da morte
-    WIDTH_GROWTH_FACTOR: 0.10,        // Fator de engordamento
+    WIDTH_GROWTH_FACTOR: 0.15,        // Crescimento em largura 100% igualitário (Sincronizado)
     MAGNET_STRENGTH: 0.3,             // Atração da comida (desativado)
     MAGNET_RADIUS_MULT: 3.0,          // Área da atração
 
