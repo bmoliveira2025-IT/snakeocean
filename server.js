@@ -58,8 +58,9 @@ function createBot() {
     const r = Math.random() * (CENTER - 1000);
     const x = CENTER + Math.cos(angle) * r;
     const y = CENTER + Math.sin(angle) * r;
+    const initialLen = GAME_CONFIG.SNAKE_INITIAL_LENGTH + Math.floor(Math.random() * 20);
     
-    return {
+    const bot = {
         id: 'bot-' + Math.random().toString(36).substr(2, 9),
         name: botNames[Math.floor(Math.random() * botNames.length)],
         x: x,
@@ -67,7 +68,7 @@ function createBot() {
         angle: Math.random() * Math.PI * 2,
         targetAngle: Math.random() * Math.PI * 2,
         score: Math.floor(Math.random() * 500) + 100,
-        length: 26,
+        length: initialLen,
         radius: 20,
         history: [],
         skinIndex: Math.floor(Math.random() * 10), // Limitado a 10 skins (0-9)
@@ -75,6 +76,12 @@ function createBot() {
         aiTimer: 0,
         speed: 7.2 // Sincronizado com os 3.0 (60fps) do jogador real: 3 * (60/25) = 7.2
     };
+
+    // Pre-fill history to avoid empty segments
+    for (let i = 0; i < 200; i++) {
+        bot.history.push({ x: bot.x, y: bot.y });
+    }
+    return bot;
 }
 
 for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) {
@@ -84,6 +91,44 @@ for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) {
 // Initial food
 for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) {
     foods.push(spawnFood());
+}
+
+function checkCollision(head, target) {
+    if (!target.history || target.history.length < 5) return false;
+    // Ponto exato da colisão (cerca de 30% à frente da cabeça)
+    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.3);
+    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.3);
+    
+    const spacing = 5; // Combinado com o cliente
+    const maxIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
+    
+    for (let i = spacing; i <= maxIdx; i += spacing) {
+        const seg = target.history[i];
+        if (!seg) continue;
+        const d2 = (tipX - seg.x)**2 + (tipY - seg.y)**2;
+        const threshold = (target.radius || 20) * 0.75; // 75% da grossura (hitbox)
+        if (d2 < threshold**2) return true;
+    }
+    return false;
+}
+
+function dropDeathFood(snake) {
+    const step = 15;
+    const maxIdx = Math.min(Math.floor(snake.length) * 5, snake.history.length - 1);
+    for (let i = 0; i <= maxIdx; i += step) {
+        const pos = snake.history[i];
+        if (pos) {
+            foods.push({
+                id: Math.random().toString(36).substr(2, 9),
+                x: pos.x, y: pos.y,
+                radius: 3, 
+                color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff', '#e0e0ff', '#ff00aa'][Math.floor(Math.random() * 8)],
+                phase: Math.random() * Math.PI * 2,
+                floatOffset: 0,
+                isDeathFood: true
+            });
+        }
+    }
 }
 
 // Bot & World Update Loop (~25Hz)
@@ -126,14 +171,41 @@ setInterval(() => {
         
         // Update history (very simplified for server)
         bot.history.unshift({ x: bot.x, y: bot.y });
-        bot.history.length = Math.min(bot.history.length, 150);
+        bot.history.length = Math.min(bot.history.length, 500); // 500 pontos para cobras longas
+
+        // --- BOT COLLISION ---
+        let died = false;
+        // Check boundary
+        if (Math.hypot(bot.x - CENTER, bot.y - CENTER) > CENTER - 20) {
+            died = true;
+        }
+        // Check bots
+        if (!died) {
+            for (let other of bots) {
+                if (other.id === bot.id) continue;
+                if (checkCollision(bot, other)) { died = true; break; }
+            }
+        }
+        // Check players
+        if (!died) {
+            for (let id in players) {
+                if (checkCollision(bot, players[id])) { died = true; break; }
+            }
+        }
+
+        if (died) {
+            dropDeathFood(bot);
+            // Respawn bot in a new place
+            const fresh = createBot();
+            Object.assign(bot, fresh);
+        }
     });
 
     // Broadcast bots regularly
     io.emit('botsUpdated', bots.map(b => ({
         id: b.id, name: b.name, x: b.x, y: b.y, angle: b.angle, 
         score: b.score, length: b.length, radius: b.radius,
-        skinIndex: b.skinIndex, history: b.history.slice(0, 50)
+        skinIndex: b.skinIndex, history: b.history.slice(0, 200) // Mais histórico para precisão de colisão
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 

@@ -766,7 +766,7 @@
             CAMERA_LOOK_AHEAD: 15,            // "Olhar em frente": efeito cinemático que atira a câmara ligeiramente na direção do teu movimento
 
             // ✨ 8. EFEITOS VISUAIS E PARTÍCULAS
-            DEATH_FOOD_RADIUS: 2,             // Tamanho exato em pixels da "comida de morte" (os restos deixados pelas cobras)
+            DEATH_FOOD_RADIUS: 3,             // Tamanho exato em pixels da "comida de morte" (os restos deixados pelas cobras)
             DEATH_FOOD_STEP: 15,              // Distância entre cada rasto de comida caída para desenhar a silhueta do cadáver na perfeição
             FOOD_GLOW_MULT_NORMAL: 3.5,       // Intensidade e alcance do brilho (halo de luz) da comida normal flutuante
             FOOD_GLOW_MULT_DEATH: 2.0         // Intensidade do brilho da comida de morte (mais contido para manter a forma da cobra que morreu)
@@ -857,7 +857,7 @@
                     if (sb.history) {
                         if (!b.history || b.history.length !== sb.history.length) b.history = sb.history;
                         else {
-                            for(let i=0; i<sb.history.length; i++) {
+                            for (let i = 0; i < sb.history.length; i++) {
                                 b.history[i].tx = sb.history[i].x;
                                 b.history[i].ty = sb.history[i].y;
                             }
@@ -1000,7 +1000,7 @@
                 const r = Math.random() * (CENTER - 1000);
                 const x = CENTER + Math.cos(angle) * r;
                 const y = CENTER + Math.sin(angle) * r;
-                
+
                 let isSafe = true;
 
                 // Verificar distância de nós próprios (se necessário)
@@ -1049,7 +1049,7 @@
                 id: 'bot-' + Math.random().toString(36).substr(2, 9),
                 x: pos.x, y: pos.y, angle: Math.random() * Math.PI * 2,
                 targetAngle: Math.random() * Math.PI * 2,
-                speed: GAME_CONFIG.SNAKE_BASE_SPEED, 
+                speed: GAME_CONFIG.SNAKE_BASE_SPEED,
                 normalSpeed: GAME_CONFIG.SNAKE_BASE_SPEED - 0.7 + Math.random(),
                 radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
                 length: initialLen,
@@ -1086,12 +1086,15 @@
         }
 
         const checkPerfectCollision = (headX, headY, headR, headAngle, target) => {
-            const tipX = headX + Math.cos(headAngle) * (headR * 0.3);
-            const tipY = headY + Math.sin(headAngle) * (headR * 0.3);
-            const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
+            // Ponto de colisão ligeiramente mais à frente (50% do raio) para detecção em alta velocidade
+            const tipX = headX + Math.cos(headAngle) * (headR * 0.5);
+            const tipY = headY + Math.sin(headAngle) * (headR * 0.5);
+            const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING || 5;
+            
+            // Verificar pelo menos os últimos 200 pontos (sincronizado com o servidor)
             const maxHistoryIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
 
-            for (let i = 0; i <= maxHistoryIdx; i += spacing) {
+            for (let i = spacing; i <= maxHistoryIdx; i += spacing) {
                 const s = target.history[i]; if (!s) continue;
                 const distSq = (tipX - s.x) ** 2 + (tipY - s.y) ** 2;
                 const threshold = (target.radius || GAME_CONFIG.SNAKE_INITIAL_RADIUS) * GAME_CONFIG.SNAKE_HITBOX_SIZE;
@@ -1423,7 +1426,7 @@
         function drawSnake(context, entity, activeSkin, isBoosting) {
             if (!activeSkin || !activeSkin.getBodyColor) {
                 // Safeguard: fallback skin if activeSkin is undefined
-                activeSkin = skins[0]; 
+                activeSkin = skins[0];
             }
             const segments = Math.floor(entity.length);
             const isHigh = qualityOpt === 'high';
@@ -1647,7 +1650,7 @@
                     bot.x += (bot.targetX - bot.x) * lf;
                     bot.y += (bot.targetY - bot.y) * lf;
                     let aD = bot.targetAngle - bot.angle;
-                    while(aD < -Math.PI) aD += Math.PI * 2; while(aD > Math.PI) aD -= Math.PI * 2;
+                    while (aD < -Math.PI) aD += Math.PI * 2; while (aD > Math.PI) aD -= Math.PI * 2;
                     bot.angle += aD * lf;
                     if (bot.history) {
                         bot.history.forEach(seg => {
@@ -1791,47 +1794,47 @@
             // Fullscreen no mobile (pedido do utilizador)
             if (isTouch) {
                 const docEl = document.documentElement;
-                if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-                else if (docEl.mozRequestFullScreen) docEl.mozRequestFullScreen().catch(() => {});
-                else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen().catch(() => {});
-                else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen().catch(() => {});
+                if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => { });
+                else if (docEl.mozRequestFullScreen) docEl.mozRequestFullScreen().catch(() => { });
+                else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen().catch(() => { });
+                else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen().catch(() => { });
             }
 
             player.name = document.getElementById('player-name').value.trim() || 'Convidado';
             localStorage.setItem('cobraioNick', player.name);
-            
+
             const pos = getSafePosition(true); // Encontrar lugar longe de bots e outros players
-            player.x = pos.x; 
+            player.x = pos.x;
             player.y = pos.y;
-            
+
             player.length = GAME_CONFIG.SNAKE_INITIAL_LENGTH;
             player.score = 0; player.distAccum = 0;
             player.history = [];
- 
+
             for (let i = 0; i <= GAME_CONFIG.SNAKE_INITIAL_LENGTH * GAME_CONFIG.SNAKE_HISTORY_SPACING; i++) {
                 player.history.push({ x: player.x, y: player.y });
             }
- 
+
             camera.x = player.x; camera.y = player.y; camera.shake = 0;
 
             foods.length = 0; particles.length = 0; floatingTexts.length = 0; sparks.length = 0;
             // O servidor já enviou a comida inicial no 'init'
- 
+
             // bots.length = 0; // Geridos pelo servidor agora
             spawnTimer = GAME_CONFIG.SPAWN_DELAY;
             // for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) bots.push(createBot());
- 
+
             mouseX = canvas.width / 2; mouseY = canvas.height / 2;
             isMouseDown = false;
- 
+
             gameState = 'PLAYING';
- 
+
             // Join server
             socket.emit('join', {
                 name: player.name,
                 skinIndex: currentSkinIndex
             });
- 
+
             startScreen.style.display = 'none';
             leaderboardContainer.style.display = 'block';
             liveHud.style.display = 'block';
@@ -1842,13 +1845,13 @@
         const nickGuardado = localStorage.getItem('cobraioNick');
         if (nickGuardado) document.getElementById('player-name').value = nickGuardado;
 
-        function loop() { 
-            update(); 
-            draw(); 
-            drawPreview(); 
-            requestAnimationFrame(loop); 
+        function loop() {
+            update();
+            draw();
+            drawPreview();
+            requestAnimationFrame(loop);
         }
-        
+
         // Iniciar loop e resetar timer do DT
         lastLoopTime = performance.now();
         loop();
