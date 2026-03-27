@@ -889,13 +889,16 @@
         socket.on('playerLeft', (id) => { delete otherPlayers[id]; });
         socket.on('deathResidue', (newFoods) => { foods.push(...newFoods); });
         socket.on('foodEaten', (data) => {
-            const index = foods.findIndex(f => f.id === data.foodId);
+            const index = foods.findIndex(f => f && f.id === data.foodId);
             if (index !== -1) {
                 const f = foods[index];
-                spawnParticles(f.x, f.y, f.color, f.isDeathFood ? 15 : 8);
+                if (f) spawnParticles(f.x, f.y, f.color, f.isDeathFood ? 15 : 8);
                 foods.splice(index, 1);
             }
-            foods.push(data.newFood);
+            // CORREÇÃO: Só adiciona a nova comida se o servidor tiver enviado uma válida
+            if (data.newFood) {
+                foods.push(data.newFood);
+            }
         });
 
         // --- SISTEMAS DE EFEITOS (VFX) ---
