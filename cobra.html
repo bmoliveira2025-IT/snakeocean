@@ -716,7 +716,7 @@
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
 
-            SNAKE_HITBOX_SIZE: 0.65, // Mais equilibrado para não parecer que bateu no ar
+            SNAKE_HITBOX_SIZE: 0.55, // Calibrado: mais justo para evitar mortes fantasmas
             SNAKE_TURN_SPEED: 0.035,
             SNAKE_TURN_SPEED_BOOST: 0.015,
 
@@ -974,9 +974,9 @@
         }
 
         const checkPerfectCollision = (headX, headY, headR, headAngle, target) => {
-            // CORREÇÃO: O ponto exato da cabeça (hitbox mais precisa)
-            const tipX = headX + Math.cos(headAngle) * (headR * 0.75);
-            const tipY = headY + Math.sin(headAngle) * (headR * 0.75);
+            // CORREÇÃO: O ponto exato da cabeça (hitbox mais precisa e justa)
+            const tipX = headX + Math.cos(headAngle) * (headR * 0.4);
+            const tipY = headY + Math.sin(headAngle) * (headR * 0.4);
             const spacing = target.historySpacing || GAME_CONFIG.SNAKE_HISTORY_SPACING;
             const maxHistoryIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
 
