@@ -223,17 +223,21 @@ function checkCollision(head, target) {
 function dropDeathFood(snake) {
     if (!snake || !snake.history || snake.history.length === 0) return;
 
-    // A cobra deixa 50% do que "cresceu" além do tamanho inicial
-    const eatenCount = Math.max(1, Math.floor((snake.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) / 1.5));
-    if (eatenCount <= 0) return;
-
-    const step = Math.max(1, Math.floor(snake.history.length / eatenCount));
     const newFoods = [];
+    const historySampleRate = 7; // Soltar comida a cada 7 segmentos para marcar bem o corpo
 
-    for (let i = 0; i < snake.history.length && newFoods.length < eatenCount; i += step) {
+    for (let i = 0; i < snake.history.length; i += historySampleRate) {
         const pos = snake.history[i];
         if (!pos) continue;
-        const f = { ...spawnFood(true, pos.x, pos.y), id: `df_${Date.now()}_${Math.random()}` };
+        
+        const f = { 
+            id: `df_${Date.now()}_${Math.random()}`,
+            x: pos.x + (Math.random() - 0.5) * 10, // Pequena variação aleatória para não ficar uma linha perfeita demais
+            y: pos.y + (Math.random() - 0.5) * 10,
+            radius: 4, 
+            color: (i === 0) ? '#ffffff' : ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff'][Math.floor(Math.random() * 6)],
+            isDeathFood: true 
+        };
         foods.push(f);
         newFoods.push(f);
     }
