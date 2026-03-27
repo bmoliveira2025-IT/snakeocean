@@ -120,10 +120,11 @@ function checkCollision(head, target) {
 function dropDeathFood(snake) {
     const step = 15;
     const maxIdx = Math.min(Math.floor(snake.length) * 5, snake.history.length - 1);
+    const newFoods = [];
     for (let i = 0; i <= maxIdx; i += step) {
         const pos = snake.history[i];
         if (pos) {
-            foods.push({
+            const f = {
                 id: Math.random().toString(36).substr(2, 9),
                 x: pos.x, y: pos.y,
                 radius: 3, 
@@ -131,9 +132,13 @@ function dropDeathFood(snake) {
                 phase: Math.random() * Math.PI * 2,
                 floatOffset: 0,
                 isDeathFood: true
-            });
+            };
+            foods.push(f);
+            newFoods.push(f);
         }
     }
+    // NOTIFICAR CLIENTES SOBRE OS NOVOS RESTOS (IMPORTANTE!)
+    io.emit('deathResidue', newFoods);
 }
 
 // Bot & World Update Loop (~25Hz)
@@ -176,7 +181,7 @@ setInterval(() => {
                     GAME_CONFIG.SNAKE_INITIAL_RADIUS + (bot.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR
                 );
 
-                io.emit('foodEaten', { foodId: f.id, newFood: foods[foods.length - 1] });
+                io.emit('foodEaten', { foodId: f.id, newFood: newFood });
                 break;
             }
         }

@@ -910,6 +910,10 @@
             delete otherPlayers[id];
         });
 
+        socket.on('deathResidue', (newFoods) => {
+            foods.push(...newFoods);
+        });
+
         socket.on('foodEaten', (data) => {
             const index = foods.findIndex(f => f.id === data.foodId);
             if (index !== -1) {
@@ -1350,8 +1354,8 @@
                     score: player.score,
                     length: player.length,
                     radius: player.radius,
-                    // optimization: send more history for server-side collision detection
-                    history: player.history.slice(0, 800),
+                    // optimization: send up to 2000 points for server-side collision
+                    history: player.history.slice(0, 2000),
                     isBoosting: isBoosting
                 });
             }
@@ -1657,21 +1661,42 @@
                     let aD = bot.targetAngle - bot.angle;
                     while (aD < -Math.PI) aD += Math.PI * 2; while (aD > Math.PI) aD -= Math.PI * 2;
                     bot.angle += aD * lf;
-                    if (bot.history) {
-                        bot.history.forEach(seg => {
-                            if (seg.tx !== undefined) {
-                                seg.x += (seg.tx - seg.x) * lf;
-                                seg.y += (seg.ty - seg.y) * lf;
-                            }
-                        });
+                    
+                    // Simular movimento constante para gerar histórico denso (mesmo formato que o player)
+                    if (!bot.lastX) { bot.lastX = bot.x; bot.lastY = bot.y; }
+                    const distMoved = Math.hypot(bot.x - bot.lastX, bot.y - bot.lastY);
+                    if (distMoved > 0.1) {
+                        bot.distAccum = (bot.distAccum || 0) + distMoved;
+                        const vx = Math.cos(bot.angle);
+                        const vy = Math.sin(bot.angle);
+                        while (bot.distAccum >= 1) {
+                            bot.distAccum -= 1;
+                            bot.history.unshift({ x: bot.x - vx * bot.distAccum, y: bot.y - vy * bot.distAccum });
+                        }
+                        bot.history.length = Math.min(bot.history.length, 1000);
+                        bot.lastX = bot.x; bot.lastY = bot.y;
                     }
                 }
                 const skin = (bot.skinIndex !== undefined) ? skins[bot.skinIndex % skins.length] : skins[0];
-                drawSnake(ctx, bot, skin, bot.isBoosting, 1); // Spacing 1 para bots
+                drawSnake(ctx, bot, skin, bot.isBoosting, GAME_CONFIG.SNAKE_HISTORY_SPACING); // Agora usa o mesmo espaçamento que o player
             });
             Object.values(otherPlayers).forEach(p => {
+                // Mesma simulação para outros players
+                if (p.targetX !== undefined) {
+                     if (!p.lastX) { p.lastX = p.x; p.lastY = p.y; }
+                     const distMoved = Math.hypot(p.x - p.lastX, p.y - p.lastY);
+                     if (distMoved > 0.1) {
+                         p.distAccum = (p.distAccum || 0) + distMoved;
+                         while (p.distAccum >= 1) {
+                             p.distAccum -= 1;
+                             p.history.unshift({ x: p.x, y: p.y });
+                         }
+                         p.history.length = Math.min(p.history.length, 1000);
+                         p.lastX = p.x; p.lastY = p.y;
+                     }
+                }
                 const skin = (p.skinIndex !== undefined) ? skins[p.skinIndex % skins.length] : skins[0];
-                drawSnake(ctx, p, skin, p.isBoosting, 1); // Spacing 1 para outros jogadores
+                drawSnake(ctx, p, skin, p.isBoosting, GAME_CONFIG.SNAKE_HISTORY_SPACING);
             });
             drawSnake(ctx, player, skins[currentSkinIndex % skins.length], isBoostingAtivo, GAME_CONFIG.SNAKE_HISTORY_SPACING); // Spacing normal para o local
 
