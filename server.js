@@ -114,7 +114,10 @@ function checkCollision(head, target) {
 }
 
 function dropDeathFood(snake) {
-    const eatenCount = Math.floor((snake.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) / 2);
+    if (!snake || !snake.history || snake.history.length === 0) return;
+
+    // A cobra deixa 50% do que "cresceu" além do tamanho inicial
+    const eatenCount = Math.max(1, Math.floor((snake.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) / 1.5));
     if (eatenCount <= 0) return;
 
     const step = Math.max(1, Math.floor(snake.history.length / eatenCount));
@@ -122,11 +125,15 @@ function dropDeathFood(snake) {
 
     for (let i = 0; i < snake.history.length && newFoods.length < eatenCount; i += step) {
         const pos = snake.history[i];
-        const f = { ...spawnFood(), x: pos.x, y: pos.y, isDeathFood: true };
+        if (!pos) continue;
+        const f = { ...spawnFood(true, pos.x, pos.y), id: `df_${Date.now()}_${Math.random()}` };
         foods.push(f);
         newFoods.push(f);
     }
-    io.emit('deathResidue', newFoods);
+    
+    if (newFoods.length > 0) {
+        io.emit('deathResidue', newFoods);
+    }
 }
 
 // --- LOOP PRINCIPAL (TICK) ---
@@ -258,6 +265,16 @@ io.on('connection', (socket) => {
                 foods.push(newFood);
                 io.emit('foodEaten', { foodId, newFood });
             }
+        }
+    });
+
+    socket.on('playerDied', () => {
+        const p = players[socket.id];
+        if (p) {
+            console.log(`Jogador ${p.name} morreu. Gerando resíduo.`);
+            dropDeathFood(p);
+            delete players[socket.id];
+            io.emit('playerLeft', socket.id);
         }
     });
 
