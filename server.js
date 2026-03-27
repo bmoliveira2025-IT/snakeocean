@@ -181,11 +181,18 @@ setInterval(() => {
         }
     });
 
-    // Enviar dados compactados para os clientes (Removido o history)
+    // Enviar dados compactados para os clientes (AGORA COM O LENGTH)
     io.emit('botsUpdated', bots.map(b => ({
-        id: b.id, name: b.name, x: Math.round(b.x), y: Math.round(b.y),
-        angle: b.angle, score: b.score, radius: Math.round(b.radius),
-        skinIndex: b.skinIndex
+        id: b.id,
+        name: b.name,
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        angle: b.angle,
+        score: b.score,
+        radius: Math.round(b.radius),
+        skinIndex: b.skinIndex,
+        length: b.length,          // <-- A CORREÇÃO ESTÁ AQUI
+        isBoosting: b.isBoosting || false
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
@@ -207,9 +214,34 @@ io.on('connection', (socket) => {
     });
 
     socket.on('update', (data) => {
-        if (players[socket.id]) {
-            Object.assign(players[socket.id], data);
-            socket.broadcast.emit('playerUpdated', players[socket.id]);
+        const p = players[socket.id];
+        if (p) {
+            // Atualizar posição básica
+            p.x = data.x;
+            p.y = data.y;
+            p.angle = data.angle;
+            p.score = data.score;
+            p.length = data.length;
+            p.radius = data.radius;
+            p.isBoosting = data.isBoosting;
+
+            // MANTER HISTÓRICO NO SERVIDOR (Necessário para os bots colidirem com você!)
+            if (!p.history) p.history = [];
+            
+            // Só adiciona ao histórico se moveu uma distância mínima (5 pixels) para evitar "pilhas" de pontos
+            if (!p.lastHistoryX) { p.lastHistoryX = p.x; p.lastHistoryY = p.y; }
+            const distSinceLast = Math.hypot(p.x - p.lastHistoryX, p.y - p.lastHistoryY);
+            
+            if (distSinceLast >= 5) {
+                p.history.unshift({ x: p.x, y: p.y });
+                p.lastHistoryX = p.x;
+                p.lastHistoryY = p.y;
+                
+                // Limitar tamanho do histórico para otimizar performance
+                if (p.history.length > 300) p.history.pop();
+            }
+
+            socket.broadcast.emit('playerUpdated', p);
         }
     });
 
