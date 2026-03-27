@@ -740,7 +740,7 @@
             DEATH_GROWTH: 0.25,               // Quanto a cobra cresce ao absorver restos brilhantes de uma cobra morta (dá muito mais tamanho)
             DEATH_SCORE: 30,                  // Quantos pontos ganhas por restos de cobra morta
             WIDTH_GROWTH_FACTOR: 0.01,        // Fator de engordamento: quão rápido a cobra fica mais grossa à medida que fica mais comprida
-            MAGNET_STRENGTH: 0.25,            // Força de atração do "ímã" da cabeça (puxa comida que esteja próxima automaticamente)
+            MAGNET_STRENGTH: 0.0,             // Força de atração do "ímã" da cabeça (DESATIVADO por pedido do utilizador)
             MAGNET_RADIUS_MULT: 3.0,          // Área de alcance do ímã (raio da cabeça multiplicado por este valor)
 
             // 🚀 5. MECÂNICA DE BOOST (ACELERAÇÃO)
@@ -1236,8 +1236,8 @@
                     let pts = f.isDeathFood ? GAME_CONFIG.DEATH_SCORE : GAME_CONFIG.SCORE_PER_FOOD;
                     spawnFloatingText(f.x, f.y, `+${pts}`, f.color);
 
-                    // Tremor de câmara em comida lendária
-                    if (f.isDeathFood) camera.shake = 8;
+                    // Tremor removido por pedido do utilizador
+                    // if (f.isDeathFood) camera.shake = 8;
 
                     player.length += f.isDeathFood ? GAME_CONFIG.DEATH_GROWTH : GAME_CONFIG.GROWTH_PER_FOOD;
                     player.score += pts;
