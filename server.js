@@ -64,7 +64,7 @@ function createBot() {
         skinIndex: Math.floor(Math.random() * 10), // Limitado a 10 skins (0-9)
         isBoosting: false,
         aiTimer: 0,
-        speed: 3.0
+        speed: 7.2 // Sincronizado com os 3.0 (60fps) do jogador real: 3 * (60/25) = 7.2
     };
 }
 
