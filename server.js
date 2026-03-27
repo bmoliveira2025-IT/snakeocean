@@ -97,16 +97,22 @@ function getSafePosition() {
 
 function createBot() {
     const pos = getSafePosition();
+    const isBoss = Math.random() < 0.25; // 25% de chance de ser um bot grande
+    
+    const initialScore = isBoss ? 500 + Math.random() * 1500 : 100;
+    const initialLength = isBoss ? 80 + Math.random() * 150 : GAME_CONFIG.SNAKE_INITIAL_LENGTH;
+    const initialRadius = Math.min(GAME_CONFIG.SNAKE_MAX_RADIUS, GAME_CONFIG.SNAKE_INITIAL_RADIUS + (initialLength - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR);
+
     return {
         id: 'bot-' + Math.random().toString(36).substr(2, 9),
-        name: botNames[Math.floor(Math.random() * botNames.length)],
+        name: botNames[Math.floor(Math.random() * botNames.length)] + (isBoss ? ' [BOSS]' : ''),
         x: pos.x, y: pos.y,
         angle: Math.random() * Math.PI * 2,
         targetAngle: Math.random() * Math.PI * 2,
-        score: 100,
-        length: GAME_CONFIG.SNAKE_INITIAL_LENGTH,
-        radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
-        history: Array(50).fill({ x: pos.x, y: pos.y }), // Histórico inicial reduzido
+        score: initialScore,
+        length: initialLength,
+        radius: initialRadius,
+        history: Array(Math.floor(initialLength * 5) + 10).fill({ x: pos.x, y: pos.y }),
         skinIndex: Math.floor(Math.random() * 10),
         aiTimer: 0,
         speed: 7.2
