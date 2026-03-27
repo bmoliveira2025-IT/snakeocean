@@ -24,7 +24,7 @@ const GAME_CONFIG = {
     SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
     SNAKE_BASE_SPEED: 4.0,            // Velocidade IGUAL para bots e players (Sincronizado)
 
-    SNAKE_HITBOX_SIZE: 0.65,          // Valor de referência (Lógica agora é dinâmica no sistema profissional)
+    SNAKE_HITBOX_SIZE: 0.75,          // Hitbox real (75% da largura visual) - Sincronizado
     SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
     SNAKE_TURN_SPEED_BOOST: 0.015,    // Rapidez de curva ao correr
 
@@ -201,25 +201,29 @@ for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) foods.push(spawnFood());
 function checkCollision(head, target) {
     if (!target.history || target.history.length < 2) return false;
 
-    // SISTEMA CLÁSSICO E RÍGIDO (Sincronizado): Bateu = Morreu
-    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.5);
-    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.5);
+    // SISTEMA AAA (Strict): Ponta do nariz contra massa real do inimigo
+    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.65);
+    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.65);
     
     const headRadius = head.radius || 20;
-    const targetRadius = target.radius || 20;
+    const targetRadius = (target.radius || 20);
 
-    // Hitbox impiedosa: centro da testa colidindo com o raio físico do inimigo
-    const thresholdSq = (headRadius * 0.4 + targetRadius * GAME_CONFIG.SNAKE_HITBOX_SIZE) ** 2;
+    // Hitbox estrita: Seu nariz (35%) contra massa do inimigo (GAME_CONFIG.SNAKE_HITBOX_SIZE)
+    const thresholdSq = (headRadius * 0.35 + targetRadius * GAME_CONFIG.SNAKE_HITBOX_SIZE) ** 2;
 
-    // Sem imunidade de pescoço.
+    // Sem imunidade de pescoço para competitividade total
     const startIndex = 0;
 
     // 1. Checar cabeça do alvo
     const dHead2 = (tipX - target.x) ** 2 + (tipY - target.y) ** 2;
     if (dHead2 < thresholdSq) return true;
 
-    // 2. Checar corpo (histórico)
-    for (let i = startIndex; i < target.history.length; i += 2) {
+    // 2. Checar corpo (histórico limitado ao comprimento real)
+    const spacing = 5; // GAME_CONFIG.SNAKE_HISTORY_SPACING
+    const targetLen = Math.max(1, Math.floor(target.length || 30));
+    const maxIdx = Math.min(targetLen * spacing, target.history.length - 1);
+
+    for (let i = startIndex; i <= maxIdx; i += 2) {
         const seg = target.history[i];
         if (!seg) continue;
 
