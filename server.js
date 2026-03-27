@@ -22,7 +22,7 @@ const GAME_CONFIG = {
     SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
     SNAKE_HISTORY_STEP: 1,            // Precisão da física
     SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
-    SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players
+    SNAKE_BASE_SPEED: 4.0,            // Velocidade IGUAL para bots e players (AUMENTADO)
 
     SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
     SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
@@ -79,14 +79,32 @@ function spawnFood() {
 
 function updateSpatialGrid() {
     spatialGrid = {};
-    // Adicionar jogadores e bots ao grid para detecção rápida
     const entities = [...Object.values(players), ...bots];
     entities.forEach(ent => {
+        if (ent.isDead) return;
+        
+        // Registrar a cabeça
         const gx = Math.floor(ent.x / GAME_CONFIG.GRID_SIZE);
         const gy = Math.floor(ent.y / GAME_CONFIG.GRID_SIZE);
-        const key = `${gx},${gy}`;
-        if (!spatialGrid[key]) spatialGrid[key] = [];
-        spatialGrid[key].push(ent);
+        const headKey = `${gx},${gy}`;
+        if (!spatialGrid[headKey]) spatialGrid[headKey] = [];
+        spatialGrid[headKey].push(ent);
+
+        // Registrar o corpo (amostrado para performance)
+        if (ent.history) {
+            const addedKeys = new Set([headKey]);
+            for (let i = 0; i < ent.history.length; i += 15) {
+                const seg = ent.history[i];
+                const sgx = Math.floor(seg.x / GAME_CONFIG.GRID_SIZE);
+                const sgy = Math.floor(seg.y / GAME_CONFIG.GRID_SIZE);
+                const skey = `${sgx},${sgy}`;
+                if (!addedKeys.has(skey)) {
+                    if (!spatialGrid[skey]) spatialGrid[skey] = [];
+                    spatialGrid[skey].push(ent);
+                    addedKeys.add(skey);
+                }
+            }
+        }
     });
 }
 
@@ -181,17 +199,20 @@ for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) foods.push(spawnFood());
 // --- LÓGICA DE COLISÃO ---
 
 function checkCollision(head, target) {
-    if (!target.history || target.history.length < 5) return false;
+    if (!target.history || target.history.length < 2) return false;
 
-    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.6);
-    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.6);
-
-    // Checar apenas os pontos necessários do histórico
+    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.7);
+    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.7);
     const headRadius = head.radius || 20;
     const targetRadius = target.radius || 20;
-    const threshold = (headRadius + targetRadius) * 0.75; // 75% da soma dos raios para colisão justa
+    const threshold = (headRadius + targetRadius) * 0.75;
 
-    for (let i = 2; i < target.history.length; i += 2) {
+    // 1. Checar cabeça do alvo
+    const dHead2 = (tipX - target.x) ** 2 + (tipY - target.y) ** 2;
+    if (dHead2 < threshold ** 2) return true;
+
+    // 2. Checar corpo (histórico)
+    for (let i = 0; i < target.history.length; i += 2) {
         const seg = target.history[i];
         const d2 = (tipX - seg.x) ** 2 + (tipY - seg.y) ** 2;
         if (d2 < threshold ** 2) return true;
@@ -289,20 +310,25 @@ setInterval(() => {
             killBot(bot);
         }
 
-        // Colisões (Outras Cobras usando o Grid)
-        const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE);
-        const gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
+        // --- BOTS COLISÃO (Authoritative) ---
+        if (!bot.isDead) {
+            const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE);
+            const gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
+            let collisionTriggered = false;
 
-        for (let x = -1; x <= 1; x++) {
-            for (let y = -1; y <= 1; y++) {
-                const neighbors = spatialGrid[`${gx + x},${gy + y}`];
-                if (neighbors) {
-                    neighbors.forEach(other => {
-                        if (other.id !== bot.id && checkCollision(bot, other)) {
-                            console.log(`Bot ${bot.name} (${bot.id}) morreu: Colidiu com ${other.name || other.id}`);
-                            killBot(bot);
+            for (let x = -1; x <= 1 && !collisionTriggered; x++) {
+                for (let y = -1; y <= 1 && !collisionTriggered; y++) {
+                    const neighbors = spatialGrid[`${gx + x},${gy + y}`];
+                    if (neighbors) {
+                        for (let other of neighbors) {
+                            if (other.id !== bot.id && checkCollision(bot, other)) {
+                                console.log(`Bot ${bot.name} (${bot.id}) morreu: Colidiu com ${other.name || other.id}`);
+                                killBot(bot);
+                                collisionTriggered = true;
+                                break;
+                            }
                         }
-                    });
+                    }
                 }
             }
         }
@@ -345,7 +371,42 @@ setInterval(() => {
         deathTimer: b.deathTimer !== undefined ? b.deathTimer : 1.0
     })));
 
-    //Broadcast Jogadores (incluindo fantasmas morrendo)
+    // --- PLAYERS COLISÃO (Authoritative) ---
+    Object.keys(players).forEach(id => {
+        const p = players[id];
+        if (p.isDead) return;
+
+        const gx = Math.floor(p.x / GAME_CONFIG.GRID_SIZE);
+        const gy = Math.floor(p.y / GAME_CONFIG.GRID_SIZE);
+        let collisionTriggered = false;
+
+        for (let x = -1; x <= 1 && !collisionTriggered; x++) {
+            for (let y = -1; y <= 1 && !collisionTriggered; y++) {
+                const neighbors = spatialGrid[`${gx + x},${gy + y}`];
+                if (neighbors) {
+                    for (let other of neighbors) {
+                        if (other.id !== p.id && checkCollision(p, other)) {
+                            console.log(`Jogador ${p.name} morreu: Colidiu no servidor.`);
+                            
+                            // Notificar o próprio jogador para ele entrar em DYING
+                            io.to(id).emit('youDied');
+                            
+                            // Processar morte no servidor
+                            dropDeathFood(p);
+                            io.emit('botDied', { id: p.id, x: p.x, y: p.y }); 
+                            delete players[id];
+                            io.emit('playerLeft', id);
+                            
+                            collisionTriggered = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Enviar dados compactados para os clientes
     Object.keys(players).forEach(id => {
         const p = players[id];
         if (p.isDead) {

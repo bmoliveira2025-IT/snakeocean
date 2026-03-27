@@ -741,7 +741,7 @@
             SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
             SNAKE_HISTORY_STEP: 1,            // Precisão da física
             SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
-            SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players (SINCRIZADO)
+            SNAKE_BASE_SPEED: 4.0,            // Velocidade IGUAL para bots e players (SINCRIZADO)
 
             SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
             SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
@@ -910,6 +910,11 @@
             }
         });
 
+        socket.on('youDied', () => {
+            console.log("Morte autoritativa recebida do servidor.");
+            playerDie();
+        });
+
         socket.on('playerJoined', (p) => {
             if (p.id !== player.id) {
                 p.targetX = p.x; p.targetY = p.y; p.targetAngle = p.angle;
@@ -926,6 +931,7 @@
             if (data.id === player.id) return;
             let p = otherPlayers[data.id];
             if (!p) {
+                // ... (existing code for initialization)
                 data.targetX = data.x; data.targetY = data.y; data.targetAngle = data.angle;
                 data.history = [];
                 const maxLen = Math.floor((data.length || GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 50;
@@ -1781,8 +1787,8 @@
         }
 
         function playerDie() {
-            if (gameState === 'DYING') return; // Evitar múltiplas chamadas
-            socket.emit('die');
+            if (gameState === 'DYING' || gameState === 'GAME_OVER') return;
+            socket.emit('playerDied'); // Notificar servidor explicitamente se for detecção cliente
             gameState = 'DYING';
             camera.shake = 30;
 
