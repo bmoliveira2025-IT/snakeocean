@@ -61,7 +61,7 @@ function getSafePosition() {
     while (attempts < 50) {
         const x = 500 + Math.random() * (GAME_CONFIG.WORLD_SIZE - 1000);
         const y = 500 + Math.random() * (GAME_CONFIG.WORLD_SIZE - 1000);
-        
+
         let isSafe = true;
         // Check bots
         for (let b of bots) {
@@ -85,7 +85,7 @@ function createBot() {
     const x = pos.x;
     const y = pos.y;
     const initialLen = GAME_CONFIG.SNAKE_INITIAL_LENGTH + Math.floor(Math.random() * 20);
-    
+
     const bot = {
         id: 'bot-' + Math.random().toString(36).substr(2, 9),
         name: botNames[Math.floor(Math.random() * botNames.length)],
@@ -121,21 +121,21 @@ for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) {
 
 function checkCollision(head, target) {
     if (!target.history || target.history.length < 2) return false;
-    
+
     // Ponto de colisão um pouco mais à frente (60%) para garantir detecção veloz
     const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.6);
     const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.6);
-    
+
     // Como agora os históricos são esparsos (5-7px entre pontos),
     // checar todos os pontos do array é eficiente e seguro.
-    const maxIdx = Math.min(target.history.length, 500); 
+    const maxIdx = Math.min(target.history.length, 500);
     for (let i = 1; i < maxIdx; i++) {
         const seg = target.history[i];
         if (!seg) break;
-        
-        const d2 = (tipX - seg.x)**2 + (tipY - seg.y)**2;
-        const threshold = (target.radius || 20) * 0.85; 
-        if (d2 < threshold**2) return true;
+
+        const d2 = (tipX - seg.x) ** 2 + (tipY - seg.y) ** 2;
+        const threshold = (target.radius || 20) * 0.85;
+        if (d2 < threshold ** 2) return true;
     }
     return false;
 }
@@ -150,7 +150,7 @@ function dropDeathFood(snake) {
     // Distribuir eatenCount ao longo do corpo
     const availableHistory = Math.min(snake.history.length, Math.floor(snake.length * 5));
     const step = Math.max(1, Math.floor(availableHistory / eatenCount));
-    
+
     const newFoods = [];
     for (let i = 0; i < availableHistory && newFoods.length < eatenCount; i += step) {
         const pos = snake.history[i];
@@ -158,7 +158,7 @@ function dropDeathFood(snake) {
             const f = {
                 id: Math.random().toString(36).substr(2, 9),
                 x: pos.x, y: pos.y,
-                radius: 3, 
+                radius: 3,
                 color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff', '#e0e0ff', '#ff00aa'][Math.floor(Math.random() * 8)],
                 phase: Math.random() * Math.PI * 2,
                 floatOffset: 0,
@@ -173,31 +173,51 @@ function dropDeathFood(snake) {
     }
 }
 
-// Bot & World Update Loop (~25Hz)
+// --- PERFORMANCE: Spatial Grid ---
+const GRID_SIZE = 400;
+let spatialGrid = {};
+
+function updateGrid(entity) {
+    const gx = Math.floor(entity.x / GRID_SIZE);
+    const gy = Math.floor(entity.y / GRID_SIZE);
+    const key = `${gx},${gy}`;
+    if (!spatialGrid[key]) spatialGrid[key] = [];
+    spatialGrid[key].push(entity);
+}
+
+// --- Bot AI Logic ---
+function updateBotAI(bot) {
+    const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
+    if (distToCenter > CENTER - 500) {
+        bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
+    } else if (--bot.aiTimer <= 0) {
+        bot.targetAngle += (Math.random() - 0.5) * 1.5;
+        bot.aiTimer = 30 + Math.random() * 50;
+    }
+    
+    let diff = bot.targetAngle - bot.angle;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    bot.angle += diff * 0.15;
+}
+
+// --- Optimized World Update Loop (25Hz) ---
 setInterval(() => {
+    spatialGrid = {}; // Reset grid
+
+    // Register Players in Grid
+    for (let id in players) {
+        updateGrid(players[id]);
+    }
+
     bots.forEach(bot => {
-        // Simple AI: Wander
-        if (--bot.aiTimer <= 0) {
-            bot.targetAngle = (Math.random() - 0.5) * 2 * Math.PI;
-            bot.aiTimer = 40 + Math.random() * 60;
-        }
-
-        // Smooth angle
-        let diff = bot.targetAngle - bot.angle;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        bot.angle += diff * 0.1;
-
+        updateBotAI(bot);
+        
         // Move
         bot.x += Math.cos(bot.angle) * bot.speed;
         bot.y += Math.sin(bot.angle) * bot.speed;
 
-        // Boundary check
-        if (Math.hypot(bot.x - CENTER, bot.y - CENTER) > CENTER - 200) {
-            bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
-        }
-
-        // Food Collection (Simple)
+        // Food Collection (Simple but optimized via skipping)
         for (let i = 0; i < foods.length; i += 20) {
             const f = foods[i];
             const d = Math.hypot(bot.x - f.x, bot.y - f.y);
@@ -207,55 +227,54 @@ setInterval(() => {
                 foods.push(newlySpawned);
                 bot.length += GAME_CONFIG.GROWTH_PER_FOOD;
                 bot.score += GAME_CONFIG.SCORE_PER_FOOD;
-                
-                // Atualizar raio dinamicamente com a mesma fórmula do cliente
                 bot.radius = Math.min(
                     GAME_CONFIG.SNAKE_MAX_RADIUS, 
                     GAME_CONFIG.SNAKE_INITIAL_RADIUS + (bot.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.WIDTH_GROWTH_FACTOR
                 );
-
                 io.emit('foodEaten', { foodId: f.id, newFood: newlySpawned });
                 break;
             }
         }
         
-        // Update history (very simplified for server)
         bot.history.unshift({ x: bot.x, y: bot.y });
-        bot.history.length = Math.min(bot.history.length, 500); // 500 pontos para cobras longas
+        bot.history.length = Math.min(bot.history.length, 500);
 
-        // --- BOT COLLISION ---
+        // --- Optimized Collisions ---
         let died = false;
-        // Check boundary
-        if (Math.hypot(bot.x - CENTER, bot.y - CENTER) > CENTER - 20) {
-            died = true;
-        }
-        // Check bots
+        if (Math.hypot(bot.x - CENTER, bot.y - CENTER) > CENTER - 20) died = true;
+
         if (!died) {
-            for (let other of bots) {
-                if (other.id === bot.id) continue;
-                if (checkCollision(bot, other)) { died = true; break; }
-            }
-        }
-        // Check players
-        if (!died) {
-            for (let id in players) {
-                if (checkCollision(bot, players[id])) { died = true; break; }
+            // Only check own grid and neighbor grids
+            const gx = Math.floor(bot.x / GRID_SIZE);
+            const gy = Math.floor(bot.y / GRID_SIZE);
+            for (let ox = -1; ox <= 1; ox++) {
+                for (let oy = -1; oy <= 1; oy++) {
+                    const key = `${gx + ox},${gy + oy}`;
+                    const neighbors = spatialGrid[key] || [];
+                    for (let other of neighbors) {
+                        if (other.id === bot.id) continue;
+                        if (checkCollision(bot, other)) { died = true; break; }
+                    }
+                    if (died) break;
+                }
+                if (died) break;
             }
         }
 
         if (died) {
             dropDeathFood(bot);
-            // Respawn bot in a new place
             const fresh = createBot();
             Object.assign(bot, fresh);
         }
+
+        updateGrid(bot);
     });
 
-    // Broadcast bots regularly
+    // Broadcast
     io.emit('botsUpdated', bots.map(b => ({
         id: b.id, name: b.name, x: b.x, y: b.y, angle: b.angle, 
         score: b.score, length: b.length, radius: b.radius,
-        skinIndex: b.skinIndex, history: b.history.slice(0, 200) // Mais histórico para precisão de colisão
+        skinIndex: b.skinIndex, history: b.history.slice(0, 200)
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
@@ -273,53 +292,44 @@ io.on('connection', (socket) => {
         players[socket.id] = {
             id: socket.id,
             name: data.name || 'Convidado',
-            x: pos.x,
-            y: pos.y,
-            angle: 0,
-            score: 0,
-            length: 23,
-            radius: 20,
-            history: [],
-            skinIndex: data.skinIndex || 0,
+            x: pos.x, y: pos.y, angle: 0,
+            score: 0, length: 23, radius: 20,
+            history: [], skinIndex: data.skinIndex || 0,
             isBoosting: false
         };
-
-        // Send current state to the new player
         socket.emit('init', {
-            id: socket.id,
-            players,
+            id: socket.id, players,
             bots: bots.map(b => ({
                 id: b.id, name: b.name, x: b.x, y: b.y, angle: b.angle, 
                 score: b.score, length: b.length, radius: b.radius,
                 skinIndex: b.skinIndex, history: b.history.slice(0, 50)
             })),
-            foods,
-            config: GAME_CONFIG
+            foods, config: GAME_CONFIG
         });
-
-        // Notify others
         socket.broadcast.emit('playerJoined', players[socket.id]);
     });
 
     socket.on('update', (data) => {
         if (players[socket.id]) {
             Object.assign(players[socket.id], data);
-            // Broadcast update to others (maybe use rooms or throttle if needed)
             socket.broadcast.emit('playerUpdated', players[socket.id]);
         }
     });
 
     socket.on('eatFood', (foodId) => {
+        const p = players[socket.id];
+        if (!p) return;
         const index = foods.findIndex(f => f.id === foodId);
         if (index !== -1) {
             const food = foods[index];
-            foods.splice(index, 1);
-            
-            // New food
-            const newFood = spawnFood();
-            foods.push(newFood);
-
-            io.emit('foodEaten', { foodId, newFood });
+            // Anti-cheat: Validate distance
+            const dist = Math.hypot(p.x - food.x, p.y - food.y);
+            if (dist < p.radius + 100) { 
+                foods.splice(index, 1);
+                const newFood = spawnFood();
+                foods.push(newFood);
+                io.emit('foodEaten', { foodId, newFood });
+            }
         }
     });
 
@@ -344,4 +354,81 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+
+function updateGrid(entity) {
+    const gx = Math.floor(entity.x / GRID_SIZE);
+    const gy = Math.floor(entity.y / GRID_SIZE);
+    const key = `${gx},${gy}`;
+    if (!spatialGrid[key]) spatialGrid[key] = [];
+    spatialGrid[key].push(entity);
+}
+
+// 2. MELHORIA NA AI DOS BOTS: Comportamento mais orgânico
+function updateBotAI(bot) {
+    // Fugir de bordas
+    const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
+    if (distToCenter > CENTER - 500) {
+        bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
+    } else if (--bot.aiTimer <= 0) {
+        // Mudar direção aleatoriamente
+        bot.targetAngle += (Math.random() - 0.5) * 1.5;
+        bot.aiTimer = 30 + Math.random() * 50;
+    }
+
+    // Suavização do ângulo (Interpolação Linear)
+    let diff = bot.targetAngle - bot.angle;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    bot.angle += diff * 0.15;
+}
+
+// 3. LOOP DE TICK OTIMIZADO
+setInterval(() => {
+    spatialGrid = {}; // Limpa o grid a cada tick
+
+    // Atualizar Bots
+    bots.forEach(bot => {
+        updateBotAI(bot);
+        bot.x += Math.cos(bot.angle) * bot.speed;
+        bot.y += Math.sin(bot.angle) * bot.speed;
+
+        bot.history.unshift({ x: bot.x, y: bot.y });
+        if (bot.history.length > 500) bot.history.pop();
+
+        updateGrid(bot);
+    });
+
+    // Atualizar Jogadores no Grid (para os bots poderem colidir)
+    for (let id in players) {
+        updateGrid(players[id]);
+    }
+
+    // Broadcast Otimizado: Enviar apenas dados essenciais
+    const botData = bots.map(b => ({
+        id: b.id, x: Math.round(b.x), y: Math.round(b.y),
+        angle: parseFloat(b.angle.toFixed(2)),
+        score: b.score, radius: Math.round(b.radius)
+    }));
+
+    io.emit('s', { b: botData }); // Nome de evento curto economiza bytes
+}, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
+
+// 4. VALIDAÇÃO DE COMIDA NO LADO DO SERVIDOR
+socket.on('eatFood', (foodId) => {
+    const p = players[socket.id];
+    if (!p) return;
+
+    const index = foods.findIndex(f => f.id === foodId);
+    if (index !== -1) {
+        const food = foods[index];
+        const dist = Math.hypot(p.x - food.x, p.y - food.y);
+
+        // Anti-cheat básico: Só aceita se estiver perto da comida
+        if (dist < p.radius + 50) {
+            foods.splice(index, 1);
+            const newFood = spawnFood();
+            foods.push(newFood);
+            io.emit('foodEaten', { foodId, newFood });
+        }
+    }
 });
