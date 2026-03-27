@@ -185,7 +185,7 @@ setInterval(() => {
     io.emit('botsUpdated', bots.map(b => ({
         id: b.id, name: b.name, x: Math.round(b.x), y: Math.round(b.y),
         angle: b.angle, score: b.score, radius: Math.round(b.radius),
-        skinIndex: b.skinIndex, history: b.history.slice(0, 40) // Histórico resumido para render
+        skinIndex: b.skinIndex, history: b.history.slice(0, 200) // Aumentamos para 200 para garantir que o corpo apareça por completo
     })));
 }, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 

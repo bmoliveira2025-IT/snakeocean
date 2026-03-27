@@ -840,12 +840,9 @@
             if (data.bots) {
                 bots = data.bots.map(b => {
                     b.targetX = b.x; b.targetY = b.y; b.targetAngle = b.angle;
-                    // Preparar histórico inicial denso para bots
                     b.history = [];
-                    const maxLen = Math.floor(b.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
-                    for (let i = 0; i <= maxLen; i++) {
-                        b.history.push({ x: b.x, y: b.y });
-                    }
+                    const maxLen = Math.floor(b.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
+                    for (let i = 0; i <= maxLen; i++) b.history.push({ x: b.x, y: b.y });
                     return b;
                 });
             }
@@ -858,25 +855,20 @@
                 if (!b) {
                     sb.targetX = sb.x; sb.targetY = sb.y; sb.targetAngle = sb.angle;
                     sb.history = [];
-                    const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
-                    for (let i = 0; i <= maxLen; i++) {
-                        sb.history.push({ x: sb.x, y: sb.y });
-                    }
+                    const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 200;
+                    for (let i = 0; i <= maxLen; i++) sb.history.push({ x: sb.x, y: sb.y });
                     bots.push(sb);
                 } else {
-                    // Atualiza alvos
                     b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
                     b.score = sb.score; b.length = sb.length; b.radius = sb.radius;
                     b.isBoosting = sb.isBoosting;
 
-                    // Sincronizar suavemente o histórico do servidor para que a cauda não fique desalinhada
-                    // Isso garante que a comida largada pelo servidor sobrepõe-se perfeitamente com a cobra visual!
                     if (sb.history && b.history) {
                         for (let i = 0; i < sb.history.length; i++) {
-                            let localIdx = i * 5; // O servidor envia o histórico a cada 5 posições
+                            let localIdx = i * 5; 
                             if (b.history[localIdx]) {
-                                b.history[localIdx].x += (sb.history[i].x - b.history[localIdx].x) * 0.5;
-                                b.history[localIdx].y += (sb.history[i].y - b.history[localIdx].y) * 0.5;
+                                b.history[localIdx].x += (sb.history[i].x - b.history[localIdx].x) * 0.1;
+                                b.history[localIdx].y += (sb.history[i].y - b.history[localIdx].y) * 0.1;
                             }
                         }
                     }
@@ -1426,10 +1418,11 @@
             if (!activeSkin || !activeSkin.getBodyColor) {
                 activeSkin = skins[0];
             }
+            const spacing = customSpacing || GAME_CONFIG.SNAKE_HISTORY_SPACING;
             const segments = Math.floor(entity.length);
+            // IMPORTANTE: Só desenha o que temos no histórico
+            const availableSegments = Math.min(segments, Math.floor((entity.history.length - 1) / spacing));
             const isHigh = qualityOpt === 'high';
-
-            const spacing = customSpacing || GAME_CONFIG.SNAKE_HISTORY_STEP;
 
             // PASS 1: Borda exterior
             context.save();
@@ -1454,23 +1447,22 @@
 
             context.beginPath();
             context.moveTo(entity.x, entity.y);
-            for (let i = 1; i < segments; i++) {
+            for (let i = 1; i < availableSegments; i++) {
                 const pos = entity.history[i * spacing];
-                if (!pos) break;
-                context.lineTo(pos.x, pos.y);
+                if (pos) context.lineTo(pos.x, pos.y);
             }
             context.stroke();
             context.restore();
 
             // PASS 2: Corpo
-            for (let i = segments - 1; i >= 0; i--) {
+            for (let i = availableSegments - 1; i >= 0; i--) {
                 const pos = i === 0 ? { x: entity.x, y: entity.y } : entity.history[i * spacing];
                 if (!pos) continue;
 
                 let isDark = Math.floor(i / 4) % 2 === 0;
 
-                const baseColors = activeSkin.getBodyColor(isDark, i, segments);
-                let c = activeSkin.getTailColor && activeSkin.getTailColor(segments - i) ? activeSkin.getTailColor(segments - i) : { c1: baseColors[0], c2: baseColors[1] };
+                const baseColors = activeSkin.getBodyColor(isDark, i, availableSegments);
+                let c = activeSkin.getTailColor && activeSkin.getTailColor(availableSegments - i) ? activeSkin.getTailColor(availableSegments - i) : { c1: baseColors[0], c2: baseColors[1] };
 
                 context.fillStyle = c.c1;
                 context.beginPath();
