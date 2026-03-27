@@ -77,11 +77,22 @@ function getSafePosition() {
         const entities = [...Object.values(players), ...bots];
         
         for (let ent of entities) {
-            const dist = Math.hypot(x - ent.x, y - ent.y);
-            if (dist < safeDistance) {
-                isSafe = false;
-                break;
+            // 1. Checar cabeça
+            const distHead = Math.hypot(x - ent.x, y - ent.y);
+            if (distHead < safeDistance) { isSafe = false; break; }
+
+            // 2. Checar TODO o corpo (histórico) - EVITA NASCER EM CIMA DE UMA COBRA LONGA
+            if (ent.history) {
+                for (let i = 0; i < ent.history.length; i += 2) { // Pular alguns pontos para performance (ainda seguro)
+                    const segment = ent.history[i];
+                    const distBody = Math.hypot(x - segment.x, y - segment.y);
+                    if (distBody < safeDistance / 2) { // Raio menor para o rastro, mas ainda muito seguro
+                        isSafe = false;
+                        break;
+                    }
+                }
             }
+            if (!isSafe) break;
         }
 
         if (isSafe) return { x, y };

@@ -737,13 +737,13 @@
             TOTAL_FOOD: 1500,                 // Quantidade máxima de comida normal
 
             SNAKE_INITIAL_LENGTH: 30,         // Tamanho inicial
-            SNAKE_INITIAL_RADIUS: 24,         // Grossura inicial
+            SNAKE_INITIAL_RADIUS: 26,         // Grossura inicial
             SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
             SNAKE_HISTORY_STEP: 1,            // Precisão da física
             SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
             SNAKE_BASE_SPEED: 3.5,            // Velocidade IGUAL para bots e players
 
-            SNAKE_HITBOX_SIZE: 0.75,          // Área de colisão letal
+            SNAKE_HITBOX_SIZE: 0.55,          // Área de colisão letal
             SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
             SNAKE_TURN_SPEED_BOOST: 0.015,    // Rapidez de curva ao correr
 
@@ -752,14 +752,14 @@
             DEATH_GROWTH: 0.50,               // Crescimento por comida da morte
             DEATH_SCORE: 30,                  // Pontos por comida da morte
             WIDTH_GROWTH_FACTOR: 0.10,        // Fator de engordamento
-            MAGNET_STRENGTH: 0.0,             // Atração da comida (desativado)
+            MAGNET_STRENGTH: 0.3,             // Atração da comida (desativado)
             MAGNET_RADIUS_MULT: 3.0,          // Área da atração
 
             BOOST_SPEED_MULT: 2.0,            // Multiplicador de velocidade ao correr
             BOOST_SCORE_LOSS: 2,              // Perda de score contínua
-            BOOST_LENGTH_LOSS: 0.3,           // Encolhimento do corpo contínuo
+            BOOST_LENGTH_LOSS: 0.2,           // Encolhimento do corpo contínuo
             BOOST_MIN_LENGTH: 10,             // Tamanho mínimo para usar boost
-            BOOST_FRAMES_PER_DROP: 3,         // Comida expelida a cada X frames
+            BOOST_FRAMES_PER_DROP: 2,         // Comida expelida a cada X frames
 
             NUM_BOTS: 15,                     // Um pouco mais de bots para preencher o mapa
             SPAWN_DELAY: 100,
@@ -773,7 +773,7 @@
             ZOOM_SHRINK_RATE: 0.0006,         // Velocidade que afasta
             CAMERA_LOOK_AHEAD: 15,            // Câmera adiante
 
-            DEATH_FOOD_RADIUS: 3,
+            DEATH_FOOD_RADIUS: 3.5,
             DEATH_FOOD_STEP: 15,
             FOOD_GLOW_MULT_NORMAL: 3.5,
             FOOD_GLOW_MULT_DEATH: 2.0
@@ -1030,19 +1030,28 @@
 
                 // Bloqueia se nascer na visão de um bot
                 for (let bot of bots) {
-                    if (Math.hypot(x - bot.x, y - bot.y) < safeDistance) {
-                        isSafe = false;
-                        break;
+                    if (Math.hypot(x - bot.x, y - bot.y) < safeDistance) { isSafe = false; break; }
+                    // Checar corpo do bot
+                    if (bot.history) {
+                        for (let i = 0; i < bot.history.length; i += 3) {
+                            if (Math.hypot(x - bot.history[i].x, y - bot.history[i].y) < safeDistance / 2) { isSafe = false; break; }
+                        }
                     }
+                    if (!isSafe) break;
                 }
 
                 // Bloqueia se nascer na visão de um jogador
                 if (isSafe) {
                     for (let id in otherPlayers) {
-                        if (Math.hypot(x - otherPlayers[id].x, y - otherPlayers[id].y) < safeDistance) {
-                            isSafe = false;
-                            break;
+                        const op = otherPlayers[id];
+                        if (Math.hypot(x - op.x, y - op.y) < safeDistance) { isSafe = false; break; }
+                        // Checar corpo do outro jogador
+                        if (op.history) {
+                            for (let i = 0; i < op.history.length; i += 3) {
+                                if (Math.hypot(x - op.history[i].x, y - op.history[i].y) < safeDistance / 2) { isSafe = false; break; }
+                            }
                         }
+                        if (!isSafe) break;
                     }
                 }
 
