@@ -16,10 +16,19 @@ const PORT = process.env.PORT || 3000;
 // Game State
 const players = {};
 const foods = [];
-const WORLD_SIZE = 8000;
-const TOTAL_FOOD = 1500;
-const NUM_BOTS = 30; // Mais bots para preencher o mundo sincronizado
-const CENTER = WORLD_SIZE / 2;
+const GAME_CONFIG = {
+    WORLD_SIZE: 8000,
+    TOTAL_FOOD: 1500,
+    NUM_BOTS: 30,
+    SNAKE_BASE_SPEED: 3.0,
+    GROWTH_PER_FOOD: 0.5,
+    SCORE_PER_FOOD: 10,
+    SNAKE_INITIAL_LENGTH: 26,
+    SNAKE_INITIAL_RADIUS: 20,
+    SERVER_TICK_RATE: 25 // 40ms interval
+};
+
+const CENTER = GAME_CONFIG.WORLD_SIZE / 2;
 
 const botNames = [
     'SlitherMaster', 'Viper', 'NeonSnake', 'CobraQueen', 'Toxic', 'Ghost',
@@ -29,11 +38,11 @@ const botNames = [
 
 function spawnFood() {
     const angle = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * (WORLD_SIZE / 2 - 20);
+    const r = Math.sqrt(Math.random()) * (GAME_CONFIG.WORLD_SIZE / 2 - 20);
     return {
         id: Math.random().toString(36).substr(2, 9),
-        x: WORLD_SIZE / 2 + Math.cos(angle) * r,
-        y: WORLD_SIZE / 2 + Math.sin(angle) * r,
+        x: GAME_CONFIG.WORLD_SIZE / 2 + Math.cos(angle) * r,
+        y: GAME_CONFIG.WORLD_SIZE / 2 + Math.sin(angle) * r,
         radius: Math.random() * 1 + 2,
         color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff', '#e0e0ff', '#ff00aa'][Math.floor(Math.random() * 8)],
         phase: Math.random() * Math.PI * 2,
@@ -68,12 +77,12 @@ function createBot() {
     };
 }
 
-for (let i = 0; i < NUM_BOTS; i++) {
+for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) {
     bots.push(createBot());
 }
 
 // Initial food
-for (let i = 0; i < TOTAL_FOOD; i++) {
+for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) {
     foods.push(spawnFood());
 }
 
@@ -126,7 +135,7 @@ setInterval(() => {
         score: b.score, length: b.length, radius: b.radius,
         skinIndex: b.skinIndex, history: b.history.slice(0, 50)
     })));
-}, 40);
+}, 1000 / GAME_CONFIG.SERVER_TICK_RATE);
 
 app.use(express.static(__dirname));
 
@@ -141,8 +150,8 @@ io.on('connection', (socket) => {
         players[socket.id] = {
             id: socket.id,
             name: data.name || 'Convidado',
-            x: WORLD_SIZE / 2,
-            y: WORLD_SIZE / 2,
+            x: GAME_CONFIG.WORLD_SIZE / 2,
+            y: GAME_CONFIG.WORLD_SIZE / 2,
             angle: 0,
             score: 0,
             length: 23,
@@ -162,10 +171,7 @@ io.on('connection', (socket) => {
                 skinIndex: b.skinIndex, history: b.history.slice(0, 50)
             })),
             foods,
-            config: {
-                WORLD_SIZE,
-                TOTAL_FOOD
-            }
+            config: GAME_CONFIG
         });
 
         // Notify others

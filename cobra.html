@@ -772,7 +772,7 @@
             FOOD_GLOW_MULT_DEATH: 2.0         // Intensidade do brilho da comida de morte (mais contido para manter a forma da cobra que morreu)
         };
 
-        const CENTER = GAME_CONFIG.WORLD_SIZE / 2;
+        let CENTER = GAME_CONFIG.WORLD_SIZE / 2;
 
         let qualityOpt = localStorage.getItem('cobraioQuality') || 'high';
         let controlOpt = localStorage.getItem('cobraioControl') || 'joystick';
@@ -828,6 +828,11 @@
             // Sync food
             foods.length = 0;
             if (data.foods) foods.push(...data.foods);
+
+            if (data.config) {
+                Object.assign(GAME_CONFIG, data.config);
+                CENTER = GAME_CONFIG.WORLD_SIZE / 2;
+            }
 
             if (data.bots) {
                 bots = data.bots.map(b => {
