@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cobra.io - Edição Premium (Otimizada)</title>
+    <title>cobra.io - Edição Premium (AAA)</title>
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json">
@@ -23,7 +23,7 @@
             --neon-green: #56ab2f;
             --neon-green-dark: #3a7d20;
             --bg-dark: #0b0e14;
-            --glass-bg: rgba(11, 14, 20, 0.75);
+            --glass-bg: rgba(15, 20, 28, 0.65);
             font-family: 'Outfit', sans-serif;
         }
 
@@ -121,20 +121,35 @@
             font-weight: 800;
         }
 
-        /* --- Menu Inicial --- */
+        /* --- Menu Inicial Premium --- */
         #start-screen {
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at center, rgba(11, 25, 40, 0.85), var(--bg-dark));
+            /* Fundo Dinâmico Moderno */
+            background: linear-gradient(-45deg, #0b0e14, #141c2b, #0b0e14, #0d1e18);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             padding: clamp(10px, 3vw, 20px);
             transition: opacity 0.4s ease;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         .main-logo {
@@ -145,7 +160,7 @@
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px rgba(86, 171, 47, 0.5));
+            filter: drop-shadow(0 0 25px rgba(86, 171, 47, 0.6));
             margin-bottom: 0.2rem;
             text-align: center;
             line-height: 1;
@@ -212,13 +227,15 @@
             background: var(--glass-bg);
             padding: clamp(20px, 4vw, 35px);
             border-radius: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
             gap: 15px;
         }
 
@@ -228,7 +245,7 @@
             font-size: clamp(15px, 4vw, 18px);
             font-family: inherit;
             font-weight: bold;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.3);
             border: 2px solid rgba(86, 171, 47, 0.4);
             border-radius: 1rem;
             color: white;
@@ -241,20 +258,21 @@
         #player-name:focus {
             outline: none;
             border-color: var(--neon-green);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
             box-shadow: 0 0 20px rgba(86, 171, 47, 0.3);
         }
 
         .skin-selector {
             width: 100%;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.03);
             border-radius: 1.5rem;
-            padding: 12px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
         }
 
         .carousel-controls {
@@ -276,7 +294,11 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            transition: transform 0.1s;
+            transition: transform 0.1s, filter 0.2s;
+        }
+
+        .carousel-btn:hover {
+            filter: brightness(1.2);
         }
 
         .carousel-btn svg {
@@ -292,20 +314,23 @@
 
         #skin-name {
             font-weight: 800;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.9);
             letter-spacing: 1px;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         #preview-canvas {
             width: 100%;
-            max-width: 220px;
+            max-width: 240px;
             height: auto;
             aspect-ratio: 2 / 1;
-            background: rgba(0, 0, 0, 0.4);
+            background: transparent;
+            /* Removido o fundo feio da preview */
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.5));
+            /* Sombra exterior global para a cobra inteira! */
         }
 
         .action-grid {
@@ -325,7 +350,7 @@
             border-radius: 1rem;
             color: white;
             cursor: pointer;
-            box-shadow: 0 6px 0 #255215, 0 10px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 0 #255215, 0 10px 25px rgba(0, 0, 0, 0.5);
             transition: all 0.1s ease;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -357,9 +382,13 @@
         #settings-open-btn svg {
             width: 26px;
             height: 26px;
-            stroke: rgba(255, 255, 255, 0.7);
-            stroke-width: 2;
-            fill: none;
+            fill: rgba(255, 255, 255, 0.8);
+            transition: transform 0.4s ease;
+        }
+
+        #settings-open-btn:hover svg {
+            transform: rotate(90deg);
+            fill: #fff;
         }
 
         /* --- CONFIGURAÇÕES (MODAL) --- */
@@ -633,17 +662,15 @@
                         </svg>
                     </button>
                 </div>
-                <canvas id="preview-canvas" width="200" height="100"></canvas>
+                <canvas id="preview-canvas" width="240" height="120"></canvas>
             </div>
 
             <div class="action-grid">
                 <button id="start-btn">JOGAR</button>
                 <button id="settings-open-btn">
-                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
+                    <svg viewBox="0 0 24 24">
                         <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
+                            d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" />
                     </svg>
                 </button>
             </div>
@@ -701,7 +728,7 @@
 
             SNAKE_INITIAL_LENGTH: 30,
             SNAKE_INITIAL_RADIUS: 18,
-            SNAKE_MAX_RADIUS: 65,     // Aumentado ligeiramente
+            SNAKE_MAX_RADIUS: 65,
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
@@ -714,8 +741,8 @@
             SCORE_PER_FOOD: 8,
             DEATH_GROWTH: 0.50,
             DEATH_SCORE: 30,
-            WIDTH_GROWTH_FACTOR: 1.5, // Fator agora escalona na Raiz Quadrada
-            MAX_HISTORY_LENGTH: 1500, // Limite imposto para salvaguardar CPU/RAM
+            WIDTH_GROWTH_FACTOR: 1.5,
+            MAX_HISTORY_LENGTH: 1500,
 
             MAGNET_STRENGTH: 0.3,
             MAGNET_RADIUS_MULT: 3.0,
@@ -727,8 +754,8 @@
             BOOST_FRAMES_PER_DROP: 2,
 
             CAMERA_BASE_ZOOM: 1.15,
-            CAMERA_MIN_ZOOM: 0.25,    // Permite afastar bem mais (Zoom out dinâmico)
-            ZOOM_SHRINK_RATE: 0.05,   // Taxa de crescimento do divisor logarítmico
+            CAMERA_MIN_ZOOM: 0.25,
+            ZOOM_SHRINK_RATE: 0.05,
             CAMERA_LOOK_AHEAD: 2.5,
 
             DEATH_FOOD_RADIUS: 3.5,
@@ -895,10 +922,7 @@
                 if (f) spawnParticles(f.x, f.y, f.color, f.isDeathFood ? 15 : 8);
                 foods.splice(index, 1);
             }
-            // CORREÇÃO: Só adiciona a nova comida se o servidor tiver enviado uma válida
-            if (data.newFood) {
-                foods.push(data.newFood);
-            }
+            if (data.newFood) foods.push(data.newFood);
         });
 
         // --- SISTEMAS DE EFEITOS (VFX) ---
@@ -1097,7 +1121,6 @@
             if (!player.isDead) {
                 player.radius = getEntityRadius(player.length);
 
-                // ZOOM INTELIGENTE LOGARÍTMICO (Afastamento profissional baseado em Raiz)
                 const zoomFactor = 1 + Math.sqrt(Math.max(0, player.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH)) * GAME_CONFIG.ZOOM_SHRINK_RATE;
                 const targetZoom = Math.max(GAME_CONFIG.CAMERA_MIN_ZOOM, GAME_CONFIG.CAMERA_BASE_ZOOM / zoomFactor - (isBoosting ? 0.08 : 0));
                 camera.zoom += (targetZoom - camera.zoom) * 0.04 * dt;
@@ -1223,7 +1246,6 @@
 
             const availableSegments = Math.max(1, Math.min(segments, Math.floor((entity.history.length - 1) / spacing)));
 
-            // LOD (Level Of Detail) DO CORPO: Pula o desenho de círculos se a câmera estiver longe!
             let lodMult = 1;
             if (camera.zoom < 0.6) lodMult = 2;
             if (camera.zoom < 0.35) lodMult = 3;
@@ -1239,7 +1261,7 @@
             }
             context.stroke(); context.restore();
 
-            for (let i = availableSegments - 1; i >= 0; i -= lodMult) { // O salto mágico do LOD
+            for (let i = availableSegments - 1; i >= 0; i -= lodMult) {
                 const pos = i === 0 ? { x: entity.x, y: entity.y } : entity.history[i * spacing];
                 if (!pos || isNaN(pos.x)) continue;
                 let isDark = Math.floor(i / 4) % 2 === 0;
@@ -1304,7 +1326,6 @@
 
             const isHigh = qualityOpt === 'high';
 
-            // LOD DO FUNDO: Grelha duplica ou triplica consoante o Zoom Out (Evita o colapso da Placa Gráfica)
             let bgLod = 1;
             if (camera.zoom < 0.6) bgLod = 2;
             if (camera.zoom < 0.35) bgLod = 3;
@@ -1326,7 +1347,6 @@
             }
             ctx.stroke();
 
-            // Bordas Mundo
             ctx.beginPath(); ctx.arc(CENTER, CENTER, CENTER, 0, Math.PI * 2);
             let distToCenter = Math.hypot(player.x - CENTER, player.y - CENTER);
             let danger = Math.max(0, (distToCenter - (CENTER - 1000)) / 1000);
@@ -1334,7 +1354,6 @@
             ctx.strokeStyle = `rgba(255, 50, 50, ${0.2 + (danger * pulse * 0.4)})`;
             ctx.lineWidth = 20 + (danger * pulse * 20); ctx.stroke();
 
-            // Renderização de Comida (A simplifica se estiver muito longe)
             const tTime = Date.now() / 1000;
             const veryZoomedOut = camera.zoom < 0.4;
 
@@ -1391,7 +1410,6 @@
 
             ctx.restore();
 
-            // Radar Minimap
             if (gameState === 'PLAYING') {
                 const mmR = isTouch ? 40 : 50, mmM = 20, mmX = mmM + mmR, mmY = mmM + mmR;
                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.arc(mmX, mmY, mmR, 0, Math.PI * 2); ctx.fill();
@@ -1433,23 +1451,47 @@
             setTimeout(() => { gameOver(); }, 2500);
         }
 
-        // Preview Snake no Menu
+        // --- SISTEMA DA PRÉ-VISUALIZAÇÃO AAA ---
         const pCanvas_ = document.getElementById('preview-canvas');
         const pCtx_ = pCanvas_.getContext('2d');
-        const pSnake = { x: -60, y: 50, angle: 0, radius: 15, length: 25, history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING, isTop1: false };
-        pSnake.history = Array.from({ length: 150 }, () => ({ x: -60, y: 50 }));
+        const pSnake = { x: 120, y: 60, angle: 0, radius: 14, length: 25, history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING, isTop1: false };
+
+        // Iniciar com uma forma coerente
+        pSnake.history = Array.from({ length: 150 }, () => ({ x: 120, y: 60 }));
 
         function drawPreview() {
             if (gameState === 'PLAYING' || gameState === 'DYING') return;
-            pCtx_.clearRect(0, 0, pCanvas_.width, pCanvas_.height);
-            const w = pCanvas_.width, h = pCanvas_.height, speed = 1.5;
-            pSnake.x += speed; pSnake.y = (h / 2) + Math.sin(Date.now() * 0.004) * 12;
-            pSnake.angle = Math.atan2(pSnake.y - pSnake.history[0].y, pSnake.x - pSnake.history[0].x);
 
-            if (pSnake.x > w + 60) {
-                pSnake.x = -60; pSnake.history = Array.from({ length: 150 }, () => ({ x: -60, y: pSnake.y }));
+            // Fundo transparente para o formato arredondado fazer a sombra fluir lindamente!
+            pCtx_.clearRect(0, 0, pCanvas_.width, pCanvas_.height);
+
+            const w = pCanvas_.width;
+            const h = pCanvas_.height;
+            const time = Date.now() * 0.002;
+            const oldX = pSnake.x;
+            const oldY = pSnake.y;
+
+            // Movimento suave e livre de bugs em formato S (Símbolo do Infinito - Lemniscata)
+            pSnake.x = (w / 2) + Math.sin(time) * 55;
+            pSnake.y = (h / 2) + Math.sin(time * 2) * 20;
+
+            pSnake.angle = Math.atan2(pSnake.y - oldY, pSnake.x - oldX);
+
+            const distMoved = Math.hypot(pSnake.x - oldX, pSnake.y - oldY);
+            pSnake.distAccum = (pSnake.distAccum || 0) + distMoved;
+
+            const pVx = Math.cos(pSnake.angle);
+            const pVy = Math.sin(pSnake.angle);
+
+            // Replicamos perfeitamente o motor real de física da cobra! Zero falhas na cauda.
+            while (pSnake.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
+                pSnake.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
+                pSnake.history.unshift({
+                    x: pSnake.x - pVx * pSnake.distAccum,
+                    y: pSnake.y - pVy * pSnake.distAccum
+                });
             }
-            pSnake.history.unshift({ x: pSnake.x, y: pSnake.y });
+
             pSnake.history.length = Math.floor(pSnake.length * pSnake.historySpacing) + 1;
             drawSnake(pCtx_, pSnake, skins[currentSkinIndex], false);
         }
