@@ -701,6 +701,15 @@
                     <button class="opt-btn" id="c-touch" onclick="setOpt('control', 'touch')">Seguir Dedo</button>
                 </div>
             </div>
+
+            <div class="settings-group" id="pwa-install-group" style="display:none;">
+                <label>Aplicativo</label>
+                <div class="settings-options">
+                    <button class="opt-btn" id="pwa-install-btn" style="grid-column: span 2; background: var(--neon-blue); color: #000; border: none;">
+                        INSTALAR APP (APK)
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1823,6 +1832,10 @@
         lastLoopTime = performance.now();
 
         // Registrar Service Worker para PWA
+        let deferredPrompt;
+        const installBtnGroup = document.getElementById('pwa-install-group');
+        const installBtn = document.getElementById('pwa-install-btn');
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
@@ -1830,6 +1843,26 @@
                     .catch(err => console.log('Erro no SW:', err));
             });
         }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtnGroup.style.display = 'block'; // Mostrar botão se instalável
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            installBtnGroup.style.display = 'none';
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalado com sucesso!');
+            installBtnGroup.style.display = 'none';
+        });
 
         loop();
     </script>
