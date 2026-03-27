@@ -1350,8 +1350,8 @@
                     score: player.score,
                     length: player.length,
                     radius: player.radius,
-                    // optimization: only send history needed for visible segments/collisions
-                    history: player.history.slice(0, 150),
+                    // optimization: send more history for server-side collision detection
+                    history: player.history.slice(0, 800),
                     isBoosting: isBoosting
                 });
             }

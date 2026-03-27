@@ -96,19 +96,22 @@ for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) {
 }
 
 function checkCollision(head, target) {
-    if (!target.history || target.history.length < 5) return false;
-    // Ponto exato da colisão (cerca de 30% à frente da cabeça)
-    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.3);
-    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.3);
+    if (!target.history || target.history.length < 2) return false;
     
-    const spacing = 5; // Combinado com o cliente
-    const maxIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
+    const tipX = head.x + Math.cos(head.angle) * (head.radius * 0.5);
+    const tipY = head.y + Math.sin(head.angle) * (head.radius * 0.5);
     
-    for (let i = spacing; i <= maxIdx; i += spacing) {
+    // Força bruta em todos os pontos recebidos para garantir que não há falhas
+    for (let i = 2; i < target.history.length; i++) {
         const seg = target.history[i];
         if (!seg) continue;
+        
+        // Se passarmos do comprimento atual da cobra, paramos de checar
+        // (Isso evita colisão com histórico 'fantasma' se a cobra encolher)
+        if (i > target.length * 5) break; 
+
         const d2 = (tipX - seg.x)**2 + (tipY - seg.y)**2;
-        const threshold = (target.radius || 20) * 0.75; // 75% da grossura (hitbox)
+        const threshold = (target.radius || 20) * 0.85; // Aumentar hitbox para 85% para ser mais letal
         if (d2 < threshold**2) return true;
     }
     return false;
