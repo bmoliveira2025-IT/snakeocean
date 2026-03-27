@@ -618,7 +618,8 @@
             }
         }
     </style>
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Substituido caminho relativo pelo CDN do socket.io para rodar sem backend -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -718,58 +719,50 @@
         // --- BLOCO DE CONFIGURAÇÃO DO JOGO (AJUSTE AQUI) ---
         // =============================================================
         const GAME_CONFIG = {
-            // 🌍 1. CONFIGURAÇÕES DO MUNDO (MAPA)
-            WORLD_SIZE: 8000,                 // Tamanho total da arena (8000x8000 pixels)
-            TOTAL_FOOD: 1500,                 // Quantidade máxima de comida normal espalhada pelo mapa em simultâneo
+            WORLD_SIZE: 8000,                 // Tamanho total da arena
+            TOTAL_FOOD: 1500,                 // Quantidade máxima de comida normal
 
-            // 🐍 2. CONFIGURAÇÕES BASE DA COBRA
-            SNAKE_INITIAL_LENGTH: 26,         // Tamanho inicial da cobra ao nascer (quantidade de gomos virtuais)
-            SNAKE_INITIAL_RADIUS: 20,         // Grossura inicial da cabeça e do corpo ao nascer (em pixels)
-            SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura que a cobra pode atingir ao crescer muito
-            SNAKE_HISTORY_STEP: 1,            // Precisão da física: guarda a posição a cada 1 pixel (garante movimento 100% fluido sem tremer)
-            SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras desenhadas (ajustado para formar o "tubo perfeito" contínuo)
-            SNAKE_BASE_SPEED: 3.0,            // Velocidade base unificada para garantir crescimento justo em todas as plataformas
+            SNAKE_INITIAL_LENGTH: 26,         // Tamanho inicial
+            SNAKE_INITIAL_RADIUS: 20,         // Grossura inicial
+            SNAKE_MAX_RADIUS: 36,             // Limite máximo de grossura
+            SNAKE_HISTORY_STEP: 1,            // Precisão da física
+            SNAKE_HISTORY_SPACING: 5,         // Distância visual entre as listras
+            SNAKE_BASE_SPEED: 3.0,            // Velocidade base (Corrigido)
 
-            // 💥 3. DINÂMICA DE COLISÃO E ROTAÇÃO (CURVAS)
-            SNAKE_HITBOX_SIZE: 0.75,          // Área de colisão letal: a cabeça tem de entrar 75% no corpo inimigo para a tua cobra morrer
-            SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva da cobra (valores baixos obrigam a fazer curvas suaves em formato de '8')
-            SNAKE_TURN_SPEED_BOOST: 0.015,    // Rapidez de curva ao correr com o Boost (fica mais "dura" e faz curvas bem mais abertas)
+            SNAKE_HITBOX_SIZE: 0.75,          // Área de colisão letal
+            SNAKE_TURN_SPEED: 0.035,          // Rapidez máxima de curva
+            SNAKE_TURN_SPEED_BOOST: 0.015,    // Rapidez de curva ao correr
 
-            // 🍎 4. ALIMENTAÇÃO, CRESCIMENTO E PONTUAÇÃO
-            GROWTH_PER_FOOD: 0.5,             // Quanto a cobra cresce em comprimento por cada partícula de comida normal absorvida
-            SCORE_PER_FOOD: 10,               // Quantos pontos ganhas no "Score" por cada partícula de comida normal
-            DEATH_GROWTH: 0.25,               // Quanto a cobra cresce ao absorver restos brilhantes de uma cobra morta (dá muito mais tamanho)
-            DEATH_SCORE: 30,                  // Quantos pontos ganhas por restos de cobra morta
-            WIDTH_GROWTH_FACTOR: 0.01,        // Fator de engordamento: quão rápido a cobra fica mais grossa à medida que fica mais comprida
-            MAGNET_STRENGTH: 0.0,             // Força de atração do "ímã" da cabeça (DESATIVADO por pedido do utilizador)
-            MAGNET_RADIUS_MULT: 3.0,          // Área de alcance do ímã (raio da cabeça multiplicado por este valor)
+            GROWTH_PER_FOOD: 0.5,             // Crescimento por comida normal
+            SCORE_PER_FOOD: 10,               // Pontos por comida normal
+            DEATH_GROWTH: 0.25,               // Crescimento por comida da morte
+            DEATH_SCORE: 30,                  // Pontos por comida da morte
+            WIDTH_GROWTH_FACTOR: 0.01,        // Fator de engordamento
+            MAGNET_STRENGTH: 0.0,             // Atração da comida (desativado)
+            MAGNET_RADIUS_MULT: 3.0,          // Área da atração
 
-            // 🚀 5. MECÂNICA DE BOOST (ACELERAÇÃO)
-            BOOST_SPEED_MULT: 2.0,            // Multiplicador de velocidade ao correr (Ex: 2.0 = o dobro da velocidade base)
-            BOOST_SCORE_LOSS: 2,              // Quantidade de pontos subtraídos continuamente ao teu Score enquanto aceleras
-            BOOST_LENGTH_LOSS: 0.3,           // Tamanho do corpo perdido continuamente enquanto corres (encolhimento)
-            BOOST_MIN_LENGTH: 10,             // Tamanho mínimo obrigatório para usar o boost (impede de correr se fores muito pequeno)
-            BOOST_FRAMES_PER_DROP: 3,         // A cada quantos *frames* (ciclos de ecrã) a cobra deita fora um resto de comida brilhante pelo rabo
+            BOOST_SPEED_MULT: 2.0,            // Multiplicador de velocidade ao correr
+            BOOST_SCORE_LOSS: 2,              // Perda de score contínua
+            BOOST_LENGTH_LOSS: 0.3,           // Encolhimento do corpo contínuo
+            BOOST_MIN_LENGTH: 10,             // Tamanho mínimo para usar boost
+            BOOST_FRAMES_PER_DROP: 3,         // Comida expelida a cada X frames
 
-            // 🤖 6. INTELIGÊNCIA ARTIFICIAL (BOTS)
-            NUM_BOTS: 10,                     // Quantidade de cobras inimigas (controladas pelo computador) a vagar no mapa
-            SPAWN_DELAY: 100,                 // Tempo de espera (em ciclos) até nascer um novo Bot após um antigo ter morrido
-            SPAWN_SAFE_RADIUS: 1200,          // Zona segura: os bots nunca nascem a menos desta distância de ti (evita mortes surpresa)
-            BOT_SPEED_MULTIPLIER_MOBILE: 0.75,// Desvantagem do Bot: reduz a velocidade da IA em 25% se tu estiveres a jogar num Telemóvel
-            BOT_VISION_RADIUS: 800,           // Raio de visão do bot: a que distância ele "deteta" outras cobras para atacar ou fugir
-            BOT_AVOID_RADIUS_MULT: 5,         // Multiplicador do radar anti-colisão: faz o bot tentar desviar-se das outras cobras
+            NUM_BOTS: 10,
+            SPAWN_DELAY: 100,
+            SPAWN_SAFE_RADIUS: 1200,
+            BOT_SPEED_MULTIPLIER_MOBILE: 0.75,
+            BOT_VISION_RADIUS: 800,
+            BOT_AVOID_RADIUS_MULT: 5,
 
-            // 🎥 7. CÂMARA E EFEITOS DE VISÃO
-            CAMERA_BASE_ZOOM: 1.0,            // Nível de Zoom padrão (aproximação do ecrã) quando a cobra é pequena
-            CAMERA_MIN_ZOOM: 0.6,             // Limite máximo de afastamento (zoom out) permitido quando a cobra for gigante
-            ZOOM_SHRINK_RATE: 0.0006,         // Rapidez com que a câmara afasta progressivamente enquanto vais ganhando tamanho
-            CAMERA_LOOK_AHEAD: 15,            // "Olhar em frente": efeito cinemático que atira a câmara ligeiramente na direção do teu movimento
+            CAMERA_BASE_ZOOM: 1.0,            // Zoom padrão
+            CAMERA_MIN_ZOOM: 0.6,             // Zoom out máximo
+            ZOOM_SHRINK_RATE: 0.0006,         // Velocidade que afasta
+            CAMERA_LOOK_AHEAD: 15,            // Câmera adiante
 
-            // ✨ 8. EFEITOS VISUAIS E PARTÍCULAS
-            DEATH_FOOD_RADIUS: 3,             // Tamanho exato em pixels da "comida de morte" (os restos deixados pelas cobras)
-            DEATH_FOOD_STEP: 15,              // Distância entre cada rasto de comida caída para desenhar a silhueta do cadáver na perfeição
-            FOOD_GLOW_MULT_NORMAL: 3.5,       // Intensidade e alcance do brilho (halo de luz) da comida normal flutuante
-            FOOD_GLOW_MULT_DEATH: 2.0         // Intensidade do brilho da comida de morte (mais contido para manter a forma da cobra que morreu)
+            DEATH_FOOD_RADIUS: 3,
+            DEATH_FOOD_STEP: 15,
+            FOOD_GLOW_MULT_NORMAL: 3.5,
+            FOOD_GLOW_MULT_DEATH: 2.0
         };
 
         let CENTER = GAME_CONFIG.WORLD_SIZE / 2;
@@ -820,12 +813,22 @@
 
         socket.on('init', (data) => {
             player.id = data.id;
-            // Clear and sync players
+            // Limpa jogadores anteriores
             Object.keys(otherPlayers).forEach(id => delete otherPlayers[id]);
             Object.keys(data.players).forEach(id => {
-                if (id !== player.id) otherPlayers[id] = data.players[id];
+                if (id !== player.id) {
+                    let p = data.players[id];
+                    // Preparar histórico inicial para não bugar o draw
+                    p.targetX = p.x; p.targetY = p.y; p.targetAngle = p.angle;
+                    p.history = [];
+                    const maxLen = Math.floor(p.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                    for (let i = 0; i <= maxLen; i++) {
+                        p.history.push({ x: p.x, y: p.y });
+                    }
+                    otherPlayers[id] = p;
+                }
             });
-            // Sync food
+
             foods.length = 0;
             if (data.foods) foods.push(...data.foods);
 
@@ -837,6 +840,12 @@
             if (data.bots) {
                 bots = data.bots.map(b => {
                     b.targetX = b.x; b.targetY = b.y; b.targetAngle = b.angle;
+                    // Preparar histórico inicial denso para bots
+                    b.history = [];
+                    const maxLen = Math.floor(b.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                    for (let i = 0; i <= maxLen; i++) {
+                        b.history.push({ x: b.x, y: b.y });
+                    }
                     return b;
                 });
             }
@@ -844,65 +853,60 @@
         });
 
         socket.on('botsUpdated', (serverBots) => {
-            // Sincronizar bots do servidor
             serverBots.forEach(sb => {
                 let b = bots.find(x => x.id === sb.id);
                 if (!b) {
                     sb.targetX = sb.x; sb.targetY = sb.y; sb.targetAngle = sb.angle;
+                    sb.history = [];
+                    const maxLen = Math.floor(sb.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                    for (let i = 0; i <= maxLen; i++) {
+                        sb.history.push({ x: sb.x, y: sb.y });
+                    }
                     bots.push(sb);
                 } else {
+                    // Ignoramos a array history do servidor completamente! O nosso lerp local é mais suave
                     b.targetX = sb.x; b.targetY = sb.y; b.targetAngle = sb.angle;
                     b.score = sb.score; b.length = sb.length; b.radius = sb.radius;
-                    // Sincronizar histórico básico para renderização
-                    if (sb.history) {
-                        if (!b.history || b.history.length !== sb.history.length) b.history = sb.history;
-                        else {
-                            for (let i = 0; i < sb.history.length; i++) {
-                                b.history[i].tx = sb.history[i].x;
-                                b.history[i].ty = sb.history[i].y;
-                            }
-                        }
-                    }
+                    b.isBoosting = sb.isBoosting;
                 }
             });
-            // Remover bots que não estão mais no servidor
             bots = bots.filter(b => serverBots.find(sb => sb.id === b.id));
             updateLeaderboard();
         });
 
         socket.on('playerJoined', (p) => {
-            if (p.id !== player.id) otherPlayers[p.id] = p;
+            if (p.id !== player.id) {
+                p.targetX = p.x; p.targetY = p.y; p.targetAngle = p.angle;
+                p.history = [];
+                const maxLen = Math.floor(p.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                for (let i = 0; i <= maxLen; i++) {
+                    p.history.push({ x: p.x, y: p.y });
+                }
+                otherPlayers[p.id] = p;
+            }
         });
 
         socket.on('playerUpdated', (data) => {
             if (data.id === player.id) return;
             let p = otherPlayers[data.id];
             if (!p) {
+                data.targetX = data.x; data.targetY = data.y; data.targetAngle = data.angle;
+                data.history = [];
+                const maxLen = Math.floor(data.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                for (let i = 0; i <= maxLen; i++) {
+                    data.history.push({ x: data.x, y: data.y });
+                }
                 otherPlayers[data.id] = data;
                 return;
             }
 
-            // Suavização da cabeça
             p.targetX = data.x;
             p.targetY = data.y;
             p.targetAngle = data.angle;
-
             p.score = data.score;
             p.length = data.length;
             p.radius = data.radius;
             p.isBoosting = data.isBoosting;
-
-            // Suavização do corpo: em vez de substituir, atualizamos os alvos das coordenadas
-            if (p.history && data.history && p.history.length === data.history.length) {
-                for (let i = 0; i < p.history.length; i++) {
-                    p.history[i].tx = data.history[i].x;
-                    p.history[i].ty = data.history[i].y;
-                }
-            } else {
-                // Se o tamanho mudou, aceitamos o salto uma vez
-                p.history = data.history;
-            }
-
             p.lastPacketTime = Date.now();
         });
 
@@ -979,23 +983,16 @@
         ];
         let currentSkinIndex = 0;
 
-        const botNames = [
-            "TWITCH_M1UNO", "LND! Bolado", "Flamengo", "Cobra Rosa S2", "GABRIEL01",
-            "SERGIO / XPBR", "CHILE", "ARGENTINA", "Uruguai_Rex", "Mexico_Neon"
-        ];
-
         const player = {
             x: CENTER, y: CENTER, angle: 0,
-            speed: GAME_CONFIG.SNAKE_BASE_SPEED_PC,
+            speed: GAME_CONFIG.SNAKE_BASE_SPEED,
             radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
             length: GAME_CONFIG.SNAKE_INITIAL_LENGTH,
             history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING,
             score: 0, boostCounter: 0, name: '', isTop1: false, distAccum: 0
         };
         const foods = [];
-
-        let bots = []; // Agora preenchido pelo servidor
-        let spawnTimer = 20;
+        let bots = [];
 
         function getSafePosition(ignoreSelf = false) {
             let attempts = 0;
@@ -1007,13 +1004,11 @@
 
                 let isSafe = true;
 
-                // Verificar distância de nós próprios (se necessário)
                 if (!ignoreSelf) {
                     const distToPlayer = Math.hypot(x - player.x, y - player.y);
                     if (distToPlayer < GAME_CONFIG.SPAWN_SAFE_RADIUS) isSafe = false;
                 }
 
-                // Verificar distância de todos os bots
                 if (isSafe) {
                     for (let bot of bots) {
                         if (Math.hypot(x - bot.x, y - bot.y) < GAME_CONFIG.SPAWN_SAFE_RADIUS) {
@@ -1023,7 +1018,6 @@
                     }
                 }
 
-                // Verificar distância de outros jogadores online
                 if (isSafe) {
                     for (let id in otherPlayers) {
                         let op = otherPlayers[id];
@@ -1037,39 +1031,7 @@
                 if (isSafe) return { x, y };
                 attempts++;
             }
-            // Fallback se não encontrar lugar seguro (raro)
             return { x: Math.random() * GAME_CONFIG.WORLD_SIZE, y: Math.random() * GAME_CONFIG.WORLD_SIZE };
-        }
-
-        function createBot() {
-            const pos = getSafePosition();
-            const behaviors = ['wander', 'chase', 'aggressive', 'coward'];
-            const initialLen = GAME_CONFIG.SNAKE_INITIAL_LENGTH + Math.random() * 20;
-
-            const availableNames = botNames.filter(name => name !== player.name);
-            const botName = availableNames[Math.floor(Math.random() * availableNames.length)] || "Bot_" + Math.floor(Math.random() * 1000);
-
-            const bot = {
-                id: 'bot-' + Math.random().toString(36).substr(2, 9),
-                x: pos.x, y: pos.y, angle: Math.random() * Math.PI * 2,
-                targetAngle: Math.random() * Math.PI * 2,
-                speed: GAME_CONFIG.SNAKE_BASE_SPEED,
-                normalSpeed: GAME_CONFIG.SNAKE_BASE_SPEED - 0.7 + Math.random(),
-                radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
-                length: initialLen,
-                history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING,
-                score: Math.floor(Math.random() * 500) + 100,
-                name: botName,
-                skin: skins[Math.floor(Math.random() * skins.length)],
-                behavior: behaviors[Math.floor(Math.random() * behaviors.length)],
-                aiTimer: 0, isBoosting: false, boostCounter: 0,
-                isTop1: false, distAccum: 0
-            };
-
-            for (let i = 0; i <= initialLen * GAME_CONFIG.SNAKE_HISTORY_SPACING; i++) {
-                bot.history.push({ x: pos.x, y: pos.y });
-            }
-            return bot;
         }
 
         function spawnFood(isDeath = false, srcX, srcY) {
@@ -1090,12 +1052,10 @@
         }
 
         const checkPerfectCollision = (headX, headY, headR, headAngle, target) => {
-            // Ponto de colisão ligeiramente mais à frente (50% do raio) para detecção em alta velocidade
             const tipX = headX + Math.cos(headAngle) * (headR * 0.5);
             const tipY = headY + Math.sin(headAngle) * (headR * 0.5);
             const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING || 5;
-            
-            // Verificar pelo menos os últimos 200 pontos (sincronizado com o servidor)
+
             const maxHistoryIdx = Math.min(Math.floor(target.length) * spacing, target.history.length - 1);
 
             for (let i = spacing; i <= maxHistoryIdx; i += spacing) {
@@ -1207,12 +1167,10 @@
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            // --- Cálculo de Delta-Time (dt) para Física independente de FPS ---
             const nowTime = performance.now();
-            const dt = (nowTime - lastLoopTime) / 16.667; // Normalizado para 60FPS (16.6ms)
+            const dt = (nowTime - lastLoopTime) / 16.667;
             lastLoopTime = nowTime;
 
-            // Arrays Efeitos Visuais
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.life -= 0.03;
@@ -1229,7 +1187,45 @@
                 if (s.life <= 0) sparks.splice(i, 1);
             }
 
-            // --- FÍSICA DO JOGADOR ---
+            // --- SUAVIZAÇÃO E HISTÓRICO DE BOTS E OUTROS JOGADORES (CORRIGIDO) ---
+            const lerpFactor = Math.min(1, 0.2 * (dt || 1));
+
+            const updateEntityMovement = (ent) => {
+                if (ent.targetX !== undefined) {
+                    ent.x += (ent.targetX - ent.x) * lerpFactor;
+                    ent.y += (ent.targetY - ent.y) * lerpFactor;
+
+                    let aDiff = ent.targetAngle - ent.angle;
+                    while (aDiff < -Math.PI) aDiff += Math.PI * 2;
+                    while (aDiff > Math.PI) aDiff -= Math.PI * 2;
+                    ent.angle += aDiff * lerpFactor;
+
+                    if (!ent.lastX) { ent.lastX = ent.x; ent.lastY = ent.y; }
+                    const distMoved = Math.hypot(ent.x - ent.lastX, ent.y - ent.lastY);
+
+                    if (distMoved > 0.1) {
+                        ent.distAccum = (ent.distAccum || 0) + distMoved;
+                        const vx = Math.cos(ent.angle);
+                        const vy = Math.sin(ent.angle);
+
+                        while (ent.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
+                            ent.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
+                            ent.history.unshift({
+                                x: ent.x - vx * ent.distAccum,
+                                y: ent.y - vy * ent.distAccum
+                            });
+                        }
+                        const targetLen = Math.floor((ent.length || GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1;
+                        ent.history.length = Math.min(ent.history.length, targetLen);
+                        ent.lastX = ent.x; ent.lastY = ent.y;
+                    }
+                }
+            };
+
+            bots.forEach(updateEntityMovement);
+            Object.values(otherPlayers).forEach(updateEntityMovement);
+
+            // --- FÍSICA DO JOGADOR LOCAL ---
             const isBoosting = isMouseDown && player.length > GAME_CONFIG.BOOST_MIN_LENGTH;
             const zoomNerf = isBoosting ? 0.15 : 0;
 
@@ -1301,29 +1297,22 @@
             }
             player.history.length = Math.min(player.history.length, Math.floor(player.length * player.historySpacing) + 1);
 
-            // Câmera Inteligente (Look-ahead)
             let lookDist = isBoosting ? 130 : player.speed * GAME_CONFIG.CAMERA_LOOK_AHEAD;
             let camTargetX = player.x + Math.cos(player.angle) * lookDist;
             let camTargetY = player.y + Math.sin(player.angle) * lookDist;
             camera.x += (camTargetX - camera.x) * 0.05;
             camera.y += (camTargetY - camera.y) * 0.05;
 
-            // Consumo de Comida (Jogador)
             const magnet = player.radius * GAME_CONFIG.MAGNET_RADIUS_MULT;
             for (let i = foods.length - 1; i >= 0; i--) {
                 const f = foods[i], d = Math.sqrt((player.x - f.x) ** 2 + (player.y - f.y) ** 2);
                 if (d < player.radius + f.radius) {
                     foods.splice(i, 1);
 
-                    // Burst de partículas explosivas
                     spawnParticles(f.x, f.y, f.color, f.isDeathFood ? 15 : 8);
 
-                    // Texto flutuante colado
                     let pts = f.isDeathFood ? GAME_CONFIG.DEATH_SCORE : GAME_CONFIG.SCORE_PER_FOOD;
                     spawnFloatingText(f.x, f.y, `+${pts}`, f.color);
-
-                    // Tremor removido por pedido do utilizador
-                    // if (f.isDeathFood) camera.shake = 8;
 
                     player.length += f.isDeathFood ? GAME_CONFIG.DEATH_GROWTH : GAME_CONFIG.GROWTH_PER_FOOD;
                     player.score += pts;
@@ -1333,17 +1322,10 @@
                         localStorage.setItem('cobraioHighScore', highScore);
                     }
                     updateLeaderboard();
-
-                    // Notify server about food eaten
                     socket.emit('eatFood', f.id);
                 } else if (d < magnet) { f.x += (player.x - f.x) * GAME_CONFIG.MAGNET_STRENGTH; f.y += (player.y - f.y) * GAME_CONFIG.MAGNET_STRENGTH; }
             }
 
-            // Sync with other players (collision check for them)
-            // Server should ideally handle this, but for now client-side check if someone else ate it is too slow.
-            // We rely on 'foodEaten' event above.
-
-            // Send local state to server (Throttled but optimized)
             const now = Date.now();
             if (now - lastUpdateTime > 45) {
                 lastUpdateTime = now;
@@ -1354,45 +1336,12 @@
                     score: player.score,
                     length: player.length,
                     radius: player.radius,
-                    // optimization: send sparse history (every 5th point) to cover long distance with less data
                     history: player.history.filter((_, i) => i % 5 === 0).slice(0, 400),
                     isBoosting: isBoosting
                 });
             }
 
-            // --- SUAVIZAÇÃO DE OUTROS JOGADORES (MELHORADA) ---
-            const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
-            for (let id in otherPlayers) {
-                let p = otherPlayers[id];
-                if (p.targetX !== undefined) {
-                    // Fator de suavização mais agressivo para evitar o efeito "tremido"
-                    const lerpFactor = 0.25;
-
-                    p.x += (p.targetX - p.x) * lerpFactor;
-                    p.y += (p.targetY - p.y) * lerpFactor;
-
-                    let aDiff = p.targetAngle - p.angle;
-                    while (aDiff < -Math.PI) aDiff += Math.PI * 2;
-                    while (aDiff > Math.PI) aDiff -= Math.PI * 2;
-                    p.angle += aDiff * lerpFactor;
-
-                    // Suavizar o corpo: Lerp apenas nos segmentos críticos ou de forma mais rápida
-                    if (p.history) {
-                        for (let i = 0; i < p.history.length; i++) {
-                            const seg = p.history[i];
-                            if (seg.tx !== undefined) {
-                                seg.x += (seg.tx - seg.x) * lerpFactor;
-                                seg.y += (seg.ty - seg.y) * lerpFactor;
-                            }
-                        }
-                    }
-                }
-            }
-
             liveScoreVal.innerText = Math.floor(player.score);
-
-            // Lógica de Bots removida do cliente (agora processada no servidor)
-            // while (foods.length < GAME_CONFIG.TOTAL_FOOD) foods.push(spawnFood());
         }
 
         function updateLeaderboard() {
@@ -1426,21 +1375,16 @@
             ` : '');
         }
 
-        // --- RENDERIZAÇÃO ---
         function drawSnake(context, entity, activeSkin, isBoosting, customSpacing) {
             if (!activeSkin || !activeSkin.getBodyColor) {
-                // Safeguard: fallback skin if activeSkin is undefined
                 activeSkin = skins[0];
             }
             const segments = Math.floor(entity.length);
             const isHigh = qualityOpt === 'high';
 
-            // Determinar o espaçamento de desenho correto:
-            // Jogador local usa GAME_CONFIG.SNAKE_HISTORY_STEP (pois o histórico é 1px-step).
-            // Bots/Outros usam 1 (pois o histórico já vem "espaçado" do servidor).
             const spacing = customSpacing || GAME_CONFIG.SNAKE_HISTORY_STEP;
 
-            // PASS 1: Borda exterior e Brilho (O segredo do efeito Tubo perfeito)
+            // PASS 1: Borda exterior
             context.save();
             context.lineCap = 'round';
             context.lineJoin = 'round';
@@ -1458,7 +1402,7 @@
                 context.shadowBlur = 0;
             }
 
-            context.lineWidth = (entity.radius * 2) + 6; // Borda preta sólida
+            context.lineWidth = (entity.radius * 2) + 6;
             context.strokeStyle = '#000000';
 
             context.beginPath();
@@ -1471,26 +1415,23 @@
             context.stroke();
             context.restore();
 
-            // PASS 2: Corpo com gradiente por segmentos
+            // PASS 2: Corpo
             for (let i = segments - 1; i >= 0; i--) {
                 const pos = i === 0 ? { x: entity.x, y: entity.y } : entity.history[i * spacing];
                 if (!pos) continue;
 
-                const nextPos = i === 0 ? null : (i === 1 ? { x: entity.x, y: entity.y } : entity.history[(i - 1) * spacing]);
-
-                // Divisão por 4 cria listras mais grossas e realistas, iguais à imagem
                 let isDark = Math.floor(i / 4) % 2 === 0;
 
                 const baseColors = activeSkin.getBodyColor(isDark, i, segments);
                 let c = activeSkin.getTailColor && activeSkin.getTailColor(segments - i) ? activeSkin.getTailColor(segments - i) : { c1: baseColors[0], c2: baseColors[1] };
 
-                context.fillStyle = c.c1; // Cor totalmente lisa, sem efeitos esféricos
+                context.fillStyle = c.c1;
                 context.beginPath();
                 context.arc(pos.x, pos.y, entity.radius, 0, Math.PI * 2);
                 context.fill();
             }
 
-            // PASS 3: Brilho de Cilíndro 3D - Passa por cima da cabeça, selando o efeito
+            // PASS 3: Brilho de Cilíndro 3D
             if (isHigh) {
                 context.save();
                 context.lineCap = 'round';
@@ -1499,7 +1440,7 @@
                 context.strokeStyle = 'rgba(255, 255, 255, 0.15)';
 
                 context.beginPath();
-                first = true;
+                let first = true;
                 for (let i = segments - 1; i > 0; i--) {
                     const pos = entity.history[i * spacing];
                     if (!pos) continue;
@@ -1511,7 +1452,7 @@
                 context.restore();
             }
 
-            // PASS 4: Apenas os Olhos (A cabeça fundiu-se com o corpo)
+            // PASS 4: Olhos 
             [entity.angle - 0.7, entity.angle + 0.7].forEach(a => {
                 const ex = entity.x + Math.cos(a) * entity.radius * 0.6, ey = entity.y + Math.sin(a) * entity.radius * 0.6;
                 const eR = entity.radius * 0.42;
@@ -1560,7 +1501,6 @@
         function draw() {
             ctx.fillStyle = '#0b0e14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Decaimento suave do tremer de ecrã (Camera Shake)
             camera.shake *= 0.85;
             if (camera.shake < 0.5) camera.shake = 0;
 
@@ -1574,7 +1514,6 @@
 
             const isHigh = qualityOpt === 'high';
 
-            // Hexágonos
             const r = 45, w = Math.sqrt(3) * r, h = 2 * r, offY = h * 0.75;
             const vW = canvas.width / camera.zoom, vH = canvas.height / camera.zoom;
             for (let row = Math.floor((camera.y - vH / 2) / offY) - 1; row <= Math.floor((camera.y + vH / 2) / offY) + 1; row++) {
@@ -1591,30 +1530,27 @@
                 }
             }
 
-            // Borda Pulsante Dinâmica Intensa
             ctx.beginPath(); ctx.arc(CENTER, CENTER, CENTER, 0, Math.PI * 2);
             let distToCenter = Math.hypot(player.x - CENTER, player.y - CENTER);
             let danger = Math.max(0, (distToCenter - (CENTER - 1000)) / 1000);
             let pulse = (Math.sin(Date.now() / 150) + 1) / 2;
 
             ctx.strokeStyle = `rgba(255, 50, 50, ${0.2 + (danger * pulse * 0.4)})`;
-            ctx.lineWidth = 20 + (danger * pulse * 20); // Linha cresce com o perigo
+            ctx.lineWidth = 20 + (danger * pulse * 20);
             ctx.stroke();
             if (isHigh) {
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = '#ff3333';
                 ctx.lineWidth = 4 + (danger * pulse * 4);
-                ctx.shadowBlur = 20 + (danger * pulse * 60); // Brilho intensifica com o perigo
+                ctx.shadowBlur = 20 + (danger * pulse * 60);
                 ctx.shadowColor = '#ff0000'; ctx.stroke();
                 ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'source-over';
             }
 
-            // Comidas
             const tTime = Date.now() / 1000;
             foods.forEach(f => {
                 if (f.x < camera.x - vW / 2 - 30 || f.x > camera.x + vW / 2 + 30 || f.y < camera.y - vH / 2 - 30 || f.y > camera.y + vH / 2 + 30) return;
 
-                // Defensive checks to prevent NaN
                 const phase = f.phase || 0;
                 const rAnim = f.isDeathFood ? f.radius : f.radius + Math.sin(Date.now() / 150 + phase) * 0.8;
 
@@ -1639,7 +1575,6 @@
                 }
             });
 
-            // Faíscas do Boost
             ctx.globalCompositeOperation = 'lighter';
             sparks.forEach(s => {
                 ctx.fillStyle = `rgba(255,255,255,${s.life})`;
@@ -1652,55 +1587,19 @@
 
             const isBoostingAtivo = isMouseDown && player.length > GAME_CONFIG.BOOST_MIN_LENGTH;
 
+            // Renderizar bots e players
             bots.forEach(bot => {
-                // Suavização simples para bots sincronizados
-                const lf = 0.2;
-                if (bot.targetX !== undefined) {
-                    bot.x += (bot.targetX - bot.x) * lf;
-                    bot.y += (bot.targetY - bot.y) * lf;
-                    let aD = bot.targetAngle - bot.angle;
-                    while (aD < -Math.PI) aD += Math.PI * 2; while (aD > Math.PI) aD -= Math.PI * 2;
-                    bot.angle += aD * lf;
-                    
-                    // Simular movimento constante para gerar histórico denso (mesmo formato que o player)
-                    if (!bot.lastX) { bot.lastX = bot.x; bot.lastY = bot.y; }
-                    const distMoved = Math.hypot(bot.x - bot.lastX, bot.y - bot.lastY);
-                    if (distMoved > 0.1) {
-                        bot.distAccum = (bot.distAccum || 0) + distMoved;
-                        const vx = Math.cos(bot.angle);
-                        const vy = Math.sin(bot.angle);
-                        while (bot.distAccum >= 1) {
-                            bot.distAccum -= 1;
-                            bot.history.unshift({ x: bot.x - vx * bot.distAccum, y: bot.y - vy * bot.distAccum });
-                        }
-                        bot.history.length = Math.min(bot.history.length, 1000);
-                        bot.lastX = bot.x; bot.lastY = bot.y;
-                    }
-                }
                 const skin = (bot.skinIndex !== undefined) ? skins[bot.skinIndex % skins.length] : skins[0];
-                drawSnake(ctx, bot, skin, bot.isBoosting, GAME_CONFIG.SNAKE_HISTORY_SPACING); // Agora usa o mesmo espaçamento que o player
+                drawSnake(ctx, bot, skin, bot.isBoosting, GAME_CONFIG.SNAKE_HISTORY_SPACING);
             });
+
             Object.values(otherPlayers).forEach(p => {
-                // Mesma simulação para outros players
-                if (p.targetX !== undefined) {
-                     if (!p.lastX) { p.lastX = p.x; p.lastY = p.y; }
-                     const distMoved = Math.hypot(p.x - p.lastX, p.y - p.lastY);
-                     if (distMoved > 0.1) {
-                         p.distAccum = (p.distAccum || 0) + distMoved;
-                         while (p.distAccum >= 1) {
-                             p.distAccum -= 1;
-                             p.history.unshift({ x: p.x, y: p.y });
-                         }
-                         p.history.length = Math.min(p.history.length, 1000);
-                         p.lastX = p.x; p.lastY = p.y;
-                     }
-                }
                 const skin = (p.skinIndex !== undefined) ? skins[p.skinIndex % skins.length] : skins[0];
                 drawSnake(ctx, p, skin, p.isBoosting, GAME_CONFIG.SNAKE_HISTORY_SPACING);
             });
-            drawSnake(ctx, player, skins[currentSkinIndex % skins.length], isBoostingAtivo, GAME_CONFIG.SNAKE_HISTORY_SPACING); // Spacing normal para o local
 
-            // Nomes e UI In-World
+            drawSnake(ctx, player, skins[currentSkinIndex % skins.length], isBoostingAtivo, GAME_CONFIG.SNAKE_HISTORY_SPACING);
+
             ctx.font = 'bold 16px Outfit, sans-serif'; ctx.textAlign = 'center';
             if (isHigh) { ctx.shadowBlur = 5; ctx.shadowColor = 'black'; }
 
@@ -1714,7 +1613,6 @@
             ctx.fillText(player.name, player.x, player.y - player.radius - 15);
             ctx.shadowBlur = 0;
 
-            // Partículas da comida (Burst Colorido)
             particles.forEach(p => {
                 ctx.fillStyle = p.color;
                 ctx.globalAlpha = Math.max(0, p.life);
@@ -1722,7 +1620,6 @@
             });
             ctx.globalAlpha = 1.0;
 
-            // Textos Flutuantes (+10 / +30)
             ctx.font = '900 14px Outfit, sans-serif';
             floatingTexts.forEach(ft => {
                 ctx.fillStyle = ft.color;
@@ -1733,7 +1630,6 @@
 
             ctx.restore();
 
-            // Minimapa
             if (gameState === 'PLAYING') {
                 const mmR = isTouch ? 40 : 50, mmM = 20, mmX = mmM + mmR, mmY = mmM + mmR;
                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.arc(mmX, mmY, mmR, 0, Math.PI * 2); ctx.fill();
@@ -1760,7 +1656,7 @@
 
         function gameOver() {
             gameState = 'GAME_OVER';
-            camera.shake = 30; // Tremor forte ao morrer
+            camera.shake = 30;
 
             document.getElementById('final-score-val').innerText = Math.floor(player.score);
             document.getElementById('game-over-msg').style.display = 'block';
@@ -1778,9 +1674,8 @@
             gameOver();
         }
 
-        // Preview
         const pCanvas_ = document.getElementById('preview-canvas');
-        pCanvas_.width = 200; pCanvas_.height = 100; // Garantir dimensões internas
+        pCanvas_.width = 200; pCanvas_.height = 100;
         const pCtx_ = pCanvas_.getContext('2d');
         const pSnake = { x: -60, y: 50, angle: 0, radius: 15, length: 25, history: [], historySpacing: GAME_CONFIG.SNAKE_HISTORY_SPACING, isTop1: false };
 
@@ -1821,7 +1716,6 @@
         updateSkinDisplay();
 
         document.getElementById('start-btn').onclick = () => {
-            // Fullscreen no mobile (pedido do utilizador)
             if (isTouch) {
                 const docEl = document.documentElement;
                 if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => { });
@@ -1833,7 +1727,7 @@
             player.name = document.getElementById('player-name').value.trim() || 'Convidado';
             localStorage.setItem('cobraioNick', player.name);
 
-            const pos = getSafePosition(true); // Encontrar lugar longe de bots e outros players
+            const pos = getSafePosition(true);
             player.x = pos.x;
             player.y = pos.y;
 
@@ -1848,18 +1742,14 @@
             camera.x = player.x; camera.y = player.y; camera.shake = 0;
 
             foods.length = 0; particles.length = 0; floatingTexts.length = 0; sparks.length = 0;
-            // O servidor já enviou a comida inicial no 'init'
 
-            // bots.length = 0; // Geridos pelo servidor agora
             spawnTimer = GAME_CONFIG.SPAWN_DELAY;
-            // for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) bots.push(createBot());
 
             mouseX = canvas.width / 2; mouseY = canvas.height / 2;
             isMouseDown = false;
 
             gameState = 'PLAYING';
 
-            // Join server
             socket.emit('join', {
                 name: player.name,
                 skinIndex: currentSkinIndex
@@ -1882,7 +1772,6 @@
             requestAnimationFrame(loop);
         }
 
-        // Iniciar loop e resetar timer do DT
         lastLoopTime = performance.now();
         loop();
     </script>
