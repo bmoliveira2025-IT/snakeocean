@@ -392,6 +392,21 @@
             fill: #fff;
         }
 
+        .desktop-tip {
+            margin-top: 25px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            max-width: 380px;
+            line-height: 1.5;
+            letter-spacing: 0.5px;
+        }
+
+        .desktop-tip span {
+            color: var(--neon-green);
+            font-weight: 900;
+        }
+
         /* --- CONFIGURAÇÕES (MODAL) --- */
         #settings-modal {
             display: none;
@@ -630,6 +645,18 @@
             #settings-open-btn {
                 width: 45px;
             }
+
+            .desktop-tip {
+                margin-top: 10px;
+                font-size: 10px;
+            }
+        }
+
+        /* Ocultar dica do F11 se o utilizador estiver num dispositivo touch (telemóvel/tablet) */
+        @media (hover: none) and (pointer: coarse) {
+            .desktop-tip {
+                display: none;
+            }
         }
     </style>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -675,6 +702,11 @@
                     </svg>
                 </button>
             </div>
+        </div>
+
+        <div class="desktop-tip">
+            💡 <b>Dica de Visualização:</b> Pressione <span>F11</span> no computador para jogar em Tela Cheia e
+            visualizar melhor o comprimento e a largura da sua cobra no mapa.
         </div>
     </div>
 
@@ -728,8 +760,8 @@
             TOTAL_FOOD: 1500,
 
             SNAKE_INITIAL_LENGTH: 30,
-            SNAKE_INITIAL_RADIUS: 12, // Cobra bem fina, perfeita para mobile e para parecer gigante depois
-            SNAKE_MAX_RADIUS: 38,     // O crescimento de espessura pára aqui (atingido por volta dos 40k-60k pontos)
+            SNAKE_INITIAL_RADIUS: 12,
+            SNAKE_MAX_RADIUS: 38,
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
@@ -742,8 +774,8 @@
             SCORE_PER_FOOD: 8,
             DEATH_GROWTH: 11.25,
             DEATH_SCORE: 30,
-            WIDTH_GROWTH_FACTOR: 0.18, // Curva de crescimento lenta (pára de crescer na largura aos 50k pontos)
-            MAX_HISTORY_LENGTH: 50000, // Permite que a cobra cresça quase infinitamente em comprimento
+            WIDTH_GROWTH_FACTOR: 0.18,
+            MAX_HISTORY_LENGTH: 50000,
 
             MAGNET_STRENGTH: 0.3,
             MAGNET_RADIUS_MULT: 3.0,
@@ -831,7 +863,7 @@
             { name: 'Zebra', getBodyColor: (isDark) => isDark ? ['#111111', '#000000'] : ['#ffffff', '#aaaaaa'] },
             { name: 'Galáxia', getBodyColor: (isDark) => isDark ? ['#1a0033', '#0d001a'] : ['#aa00ff', '#550088'], getTailColor: (p) => p <= 5 ? { c1: '#00ddff', c2: '#005588' } : null },
             { name: 'Lava', getBodyColor: (isDark) => isDark ? ['#880000', '#440000'] : ['#ff4400', '#aa2200'], getTailColor: (p) => p <= 4 ? { c1: '#ffdd00', c2: '#ff8800' } : null },
-            { name: 'Ciclope Mutante', isCyclops: true, eyeColor: '#ffcc00', getBodyColor: (isDark) => isDark ? ['#2b4a1a', '#182b0f'] : ['#56ab2f', '#3a7d20'] }, // Adaptado à imagem de referência (amarelo, corpo verde/azul)
+            { name: 'Ciclope Mutante', isCyclops: true, eyeColor: '#ffcc00', getBodyColor: (isDark) => isDark ? ['#2b4a1a', '#182b0f'] : ['#56ab2f', '#3a7d20'] },
             { name: 'Fantasma', eyeColor: '#00ffff', getBodyColor: (isDark) => isDark ? ['#e6ffff', '#99ccff'] : ['#ffffff', '#cce6ff'] },
             { name: 'Máquina de Guerra', isCyclops: true, eyeColor: '#ffdd00', getBodyColor: (isDark) => isDark ? ['#333333', '#111111'] : ['#888888', '#555555'], getTailColor: (p) => p <= 3 ? { c1: '#ff4400', c2: '#aa0000' } : null },
             { name: 'Dragão d\'Água', getBodyColor: (isDark) => isDark ? ['#003366', '#001133'] : ['#00ddff', '#0088cc'], getTailColor: (p) => p <= 5 ? { c1: '#ffffff', c2: '#aaddff' } : null },
