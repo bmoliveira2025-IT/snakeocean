@@ -728,8 +728,8 @@
             TOTAL_FOOD: 1500,
 
             SNAKE_INITIAL_LENGTH: 30,
-            SNAKE_INITIAL_RADIUS: 14, // Cobra mais fina, ideal para ecrãs mobile
-            SNAKE_MAX_RADIUS: 45,
+            SNAKE_INITIAL_RADIUS: 12, // Cobra bem fina, perfeita para mobile e para parecer gigante depois
+            SNAKE_MAX_RADIUS: 38,     // O crescimento de espessura pára aqui (atingido por volta dos 40k-60k pontos)
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
@@ -742,8 +742,8 @@
             SCORE_PER_FOOD: 8,
             DEATH_GROWTH: 11.25,
             DEATH_SCORE: 30,
-            WIDTH_GROWTH_FACTOR: 0.6,
-            MAX_HISTORY_LENGTH: 3000,
+            WIDTH_GROWTH_FACTOR: 0.18, // Curva de crescimento lenta (pára de crescer na largura aos 50k pontos)
+            MAX_HISTORY_LENGTH: 50000, // Permite que a cobra cresça quase infinitamente em comprimento
 
             MAGNET_STRENGTH: 0.3,
             MAGNET_RADIUS_MULT: 3.0,
