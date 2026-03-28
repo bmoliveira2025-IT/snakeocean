@@ -820,19 +820,20 @@
             },
 
             SNAKE_MAX_RADIUS: 38,
-            WIDTH_GROWTH_FACTOR: 0.18,
+            WIDTH_GROWTH_FACTOR: 0.15,
             MAX_HISTORY_LENGTH: 50000,
 
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
-            SNAKE_HITBOX_SIZE: 0.75,
+            SNAKE_HITBOX_SIZE: 0.65,
             SNAKE_TURN_SPEED: 0.035,
             SNAKE_TURN_SPEED_BOOST: 0.015,
 
-            GROWTH_PER_FOOD: 3.0,
+            // CRESIMENTO MAIS DESAFIANTE E DEMORADO
+            GROWTH_PER_FOOD: 1.5,
             SCORE_PER_FOOD: 8,
-            DEATH_GROWTH: 11.25,
+            DEATH_GROWTH: 5.625,
             DEATH_SCORE: 30,
 
             MAGNET_STRENGTH: 0.3,
@@ -840,13 +841,14 @@
 
             BOOST_SPEED_MULT: 2.0,
             BOOST_SCORE_LOSS: 2,
-            BOOST_LENGTH_LOSS: 0.75,
+            BOOST_LENGTH_LOSS: 0.375,
             BOOST_MIN_LENGTH: 40,
             BOOST_FRAMES_PER_DROP: 2,
 
+            // ZOOM MENOS EXTREMO PARA MELHOR VISUALIZAÇÃO
             CAMERA_BASE_ZOOM: 1.15,
-            CAMERA_MIN_ZOOM: 0.25,
-            ZOOM_SHRINK_RATE: 0.035,
+            CAMERA_MIN_ZOOM: 0.45,
+            ZOOM_SHRINK_RATE: 0.015,
             CAMERA_LOOK_AHEAD: 2.5,
 
             DEATH_FOOD_RADIUS: 3.5,
@@ -867,7 +869,6 @@
         let controlOpt = localStorage.getItem('cobraioControl') || 'joystick';
         let lookAheadOpt = localStorage.getItem('cobraioLookAhead') || 'on';
 
-        // Variáveis de Mod de Câmera (Scroll & HUD)
         let manualZoomMultiplier = 1.0;
         let hudVisible = true;
 
@@ -1192,10 +1193,15 @@
             return { x: CENTER + Math.cos(fallbackAngle) * (CENTER - 500), y: CENTER + Math.sin(fallbackAngle) * (CENTER - 500) };
         }
 
+        // ALIMENTOS VARIADOS (Mistura de grãos pequenos e grandes)
         function spawnFood(isDeath = false, srcX, srcY) {
             if (isDeath) return { x: srcX, y: srcY, radius: GAME_CONFIG.DEATH_FOOD_RADIUS, color: neonColors[Math.floor(Math.random() * neonColors.length)], phase: Math.random() * Math.PI * 2, floatOffset: 0, isDeathFood: true };
             const angle = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (CENTER - 20);
-            return { x: CENTER + Math.cos(angle) * r, y: CENTER + Math.sin(angle) * r, radius: Math.random() * 1 + 2, color: neonColors[Math.floor(Math.random() * neonColors.length)], phase: Math.random() * Math.PI * 2, floatOffset: Math.random() * Math.PI * 2, isDeathFood: false };
+
+            // 15% de chance de spawnar um Grão Gigante
+            const foodRadius = Math.random() < 0.15 ? Math.random() * 2 + 4.5 : Math.random() * 1.5 + 2.5;
+
+            return { x: CENTER + Math.cos(angle) * r, y: CENTER + Math.sin(angle) * r, radius: foodRadius, color: neonColors[Math.floor(Math.random() * neonColors.length)], phase: Math.random() * Math.PI * 2, floatOffset: Math.random() * Math.PI * 2, isDeathFood: false };
         }
 
         const checkPerfectCollision = (headX, headY, headR, headAngle, target) => {
@@ -1232,9 +1238,8 @@
             }
         };
 
-        // --- INPUT, RESIZE & MOD CONTROLS ---
+        // --- INPUT & RESIZE ---
         let mouseX = 0, mouseY = 0, isMouseDown = false;
-
         window.addEventListener('resize', resize);
         function resize() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -1430,7 +1435,6 @@
             if (!player.isDead) {
                 player.radius = getEntityRadius(player.length);
 
-                // Cálculo Dinâmico de Zoom com suporte ao Mod de Rato
                 const zoomFactor = 1 + Math.sqrt(Math.max(0, player.length - GAME_CONFIG.SNAKE_INITIAL_LENGTH)) * GAME_CONFIG.ZOOM_SHRINK_RATE;
                 const autoZoom = Math.max(GAME_CONFIG.CAMERA_MIN_ZOOM, GAME_CONFIG.CAMERA_BASE_ZOOM / zoomFactor - (isBoosting ? 0.08 : 0));
 
@@ -1484,9 +1488,13 @@
                         if (!e.isDead && checkPerfectCollision(player.x, player.y, player.radius, player.angle, e)) {
                             dropDeathFood(player); playerDie(); diedThisFrame = true; break;
                         }
-                        if (!e.isDead && checkPerfectCollision(e.x, e.y, e.radius, e.angle, player)) {
-                            e.isDead = true;
-                            dropDeathFood(e);
+
+                        // NO MODO ONLINE, deixamos o servidor ditar se matámos o inimigo para evitar a "Cobra Zombie/Fantasma".
+                        if (isOfflineMode) {
+                            if (!e.isDead && checkPerfectCollision(e.x, e.y, e.radius, e.angle, player)) {
+                                e.isDead = true;
+                                dropDeathFood(e);
+                            }
                         }
                     }
                 }
@@ -1500,7 +1508,6 @@
                     }
                     player.history.length = Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(player.length * player.historySpacing) + 1);
 
-                    // Configuração de Look Ahead Inteligente
                     let lookDist = 0;
                     if (lookAheadOpt === 'on') {
                         lookDist = player.radius * GAME_CONFIG.CAMERA_LOOK_AHEAD * (isBoosting ? 1.8 : 1.0);
@@ -1774,7 +1781,6 @@
 
             if (!player.isDead) {
                 drawSnake(ctx, player, skins[currentSkinIndex % skins.length], isBoostingAtivo);
-                // Apenas mostrar nome próprio se HUD estiver visível
                 if (hudVisible) {
                     ctx.font = 'bold 16px Outfit, sans-serif'; ctx.textAlign = 'center';
                     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(player.name, player.x, player.y - player.radius - 15);
@@ -1803,7 +1809,6 @@
 
             ctx.restore();
 
-            // Renderizar Minimapa apenas se o HUD estiver visível
             if (gameState === 'PLAYING' && hudVisible) {
                 const mmR = isTouch ? 45 : 60;
                 const safeAreaX = 15, safeAreaY = 15;
@@ -1922,7 +1927,6 @@
             player.isDead = false;
             player.history = Array.from({ length: GAME_CONFIG.SNAKE_INITIAL_LENGTH * GAME_CONFIG.SNAKE_HISTORY_SPACING + 1 }, () => ({ x: player.x, y: player.y }));
 
-            // Reset da Câmera no Início
             camera.x = player.x; camera.y = player.y; camera.shake = 0;
             manualZoomMultiplier = 1.0;
 

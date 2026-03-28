@@ -33,23 +33,23 @@ const GAME_CONFIG = {
     SNAKE_HISTORY_SPACING: 5,
     SNAKE_BASE_SPEED: 4.0,
 
-    SNAKE_HITBOX_SIZE: 0.90,          // Aumentado para cobrir a linha visual exterior desenhada no canvas
+    SNAKE_HITBOX_SIZE: 0.65,          // Reduzido para maior precisão (mais difícil de bater)
     SNAKE_TURN_SPEED: 0.035,
     SNAKE_TURN_SPEED_BOOST: 0.015,
 
-    // --- PROPORÇÃO MATEMÁTICA ABSOLUTA (1.0 de Crescimento = 8.0 de Score) ---
-    GROWTH_PER_FOOD: 3.0,             
+    // --- NOVO BALANÇO CHALLENGING (Crescimento reduzido a metade) ---
+    GROWTH_PER_FOOD: 1.5,             
     SCORE_PER_FOOD: 8,               
-    DEATH_GROWTH: 11.25,              // Proporcional para não quebrar rácio: (30 / 8) * 3.0
+    DEATH_GROWTH: 5.625,              // Proporcional: (30 / 8) * 1.5
     DEATH_SCORE: 30,                  
     
-    WIDTH_GROWTH_FACTOR: 0.18,        // Curva de crescimento lenta (pára de crescer na largura aos 50k pontos)
-    MAX_HISTORY_LENGTH: 50000,        // Permite que a cobra cresça quase infinitamente em comprimento
+    WIDTH_GROWTH_FACTOR: 0.15,        // Crescimento de largura ainda mais subtil
+    MAX_HISTORY_LENGTH: 50000,        
 
     // Sincronização do Boost para evitar o ecrã divergir da pontuação
     BOOST_SPEED_MULT: 2.0,            
     BOOST_SCORE_LOSS: 2,              
-    BOOST_LENGTH_LOSS: 0.75,          // (2 / 8) * 3.0
+    BOOST_LENGTH_LOSS: 0.375,         // (2 / 8) * 1.5
     BOOST_MIN_LENGTH: 40,             
 
     MAGNET_STRENGTH: 0.3,
@@ -87,10 +87,14 @@ function getEntityRadius(length) {
 function spawnFood() {
     const angle = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * (GAME_CONFIG.WORLD_SIZE / 2 - 50);
+
+    // 15% de chance de spawnar um Grão Gigante (Paridade com index.html v1.9)
+    const foodRadius = Math.random() < 0.15 ? Math.random() * 2 + 4.5 : Math.random() * 1.5 + 2.5;
+
     return {
         id: Math.random().toString(36).substr(2, 9),
         x: CENTER + Math.cos(angle) * r, y: CENTER + Math.sin(angle) * r,
-        radius: 3, color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff'][Math.floor(Math.random() * 6)],
+        radius: foodRadius, color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff'][Math.floor(Math.random() * 6)],
         isDeathFood: false
     };
 }
