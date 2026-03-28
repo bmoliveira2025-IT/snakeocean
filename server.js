@@ -168,23 +168,23 @@ function updateSpatialGrid() {
 }
 
 function getSafePosition() {
-    let attempts = 0;
-    const safeDistance = GAME_CONFIG.SPAWN_SAFE_RADIUS;
-    while (attempts < 100) {
-        const angle = Math.random() * Math.PI * 2, r = Math.random() * (CENTER - 1000);
-        const x = CENTER + Math.cos(angle) * r, y = CENTER + Math.sin(angle) * r;
-        let isSafe = true;
-        const entities = [...Object.values(players), ...bots];
+    const checkEnts = [...bots, ...Object.values(players)];
+    let safeDist = 1500; // Raio de segurança inicial ambicioso
 
-        for (let ent of entities) {
-            if (Math.hypot(x - ent.x, y - ent.y) < safeDistance) { isSafe = false; break; }
-            if (ent.history) {
-                for (let i = 0; i < ent.history.length; i += 10) {
-                    if (Math.hypot(x - ent.history[i].x, y - ent.history[i].y) < safeDistance / 2) { isSafe = false; break; }
-                }
+    for (let attempts = 0; attempts < 150; attempts++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.random() * (CENTER - 300);
+        const x = CENTER + Math.cos(angle) * r;
+        const y = CENTER + Math.sin(angle) * r;
+        let isSafe = true;
+
+        for (let ent of checkEnts) {
+            if (!ent.isDead && Math.hypot(x - ent.x, y - ent.y) < safeDist) {
+                isSafe = false;
+                break;
             }
-            if (!isSafe) break;
         }
+
         if (isSafe) return { x, y };
         attempts++;
     }

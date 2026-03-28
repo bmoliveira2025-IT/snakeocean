@@ -826,7 +826,7 @@
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
 
-            SNAKE_BASE_SPEED_MOBILE: 3.2, // Velocidade inicial ligeiramente mais lenta para mobile
+            SNAKE_BASE_SPEED_MOBILE: 3.2,
             SNAKE_BASE_SPEED_TABLET: 3.6,
             SNAKE_BASE_SPEED_PC: 4.0,
             get SNAKE_BASE_SPEED() {
@@ -1177,26 +1177,44 @@
             sparks.push({ x, y, vx: -Math.cos(angle) * (Math.random() * 3 + 1) + (Math.random() - 0.5) * 2, vy: -Math.sin(angle) * (Math.random() * 3 + 1) + (Math.random() - 0.5) * 2, life: 1, color: sparkColors[Math.floor(Math.random() * sparkColors.length)] });
         }
 
+        // ALGORITMO DE NASCIMENTO REFORMULADO (Distância Uniforme Dinâmica)
         function getSafePosition() {
-            const safeDist = Math.min(2000, Math.max(800, CENTER * 0.3));
+            // Obter todas as entidades ativas no mapa para o radar de perigo
+            const checkEnts = [...bots, ...Object.values(otherPlayers)];
+            if (gameState === 'PLAYING' && !player.isDead && player.x !== undefined) {
+                checkEnts.push(player);
+            }
 
-            for (let attempts = 0; attempts < 100; attempts++) {
+            let safeDist = 1500; // Começa a procurar um lugar muito isolado
+
+            for (let attempts = 0; attempts < 150; attempts++) {
                 const angle = Math.random() * Math.PI * 2;
-                const r = Math.sqrt(Math.random()) * (CENTER - 500);
-                const x = CENTER + Math.cos(angle) * r, y = CENTER + Math.sin(angle) * r;
+                // Usando random puro para o Raio ajuda a povoar mais o centro
+                const r = Math.random() * (CENTER - 300);
+                const x = CENTER + Math.cos(angle) * r;
+                const y = CENTER + Math.sin(angle) * r;
                 let isSafe = true;
 
-                const checkEnts = [...bots, ...Object.values(otherPlayers)];
                 for (let ent of checkEnts) {
                     if (!ent.isDead && Math.hypot(x - ent.x, y - ent.y) < safeDist) {
                         isSafe = false;
                         break;
                     }
                 }
-                if (isSafe) return { x, y };
+
+                if (isSafe) {
+                    return { x, y };
+                }
+
+                // Se o mapa estiver cheio, a exigência de distância segura diminui progressivamente
+                safeDist *= 0.95;
+                if (safeDist < 300) safeDist = 300; // Mas nunca nasce colado (mínimo de 300px)
             }
+
+            // Fallback total se a arena estiver num caos absoluto (mantendo uma distância da borda)
             const fallbackAngle = Math.random() * Math.PI * 2;
-            return { x: CENTER + Math.cos(fallbackAngle) * (CENTER - 500), y: CENTER + Math.sin(fallbackAngle) * (CENTER - 500) };
+            const fallbackR = Math.random() * (CENTER - 500);
+            return { x: CENTER + Math.cos(fallbackAngle) * fallbackR, y: CENTER + Math.sin(fallbackAngle) * fallbackR };
         }
 
         // --- NOVO ECOSSISTEMA DE ALIMENTOS DISTRIBUÍDOS ---
@@ -1876,7 +1894,7 @@
             if (camera.zoom < 0.35) bgLod = 3;
 
             let baseHexR = 40;
-            if (currentDevice === 'MOBILE') baseHexR = 15; // Ainda mais pequeno para telemóveis (diminuído)
+            if (currentDevice === 'MOBILE') baseHexR = 15;
             else if (currentDevice === 'TABLET') baseHexR = 30;
 
             const r = baseHexR * bgLod;
