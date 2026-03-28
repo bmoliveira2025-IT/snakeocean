@@ -1179,9 +1179,7 @@
             sparks.push({ x, y, vx: -Math.cos(angle) * (Math.random() * 3 + 1) + (Math.random() - 0.5) * 2, vy: -Math.sin(angle) * (Math.random() * 3 + 1) + (Math.random() - 0.5) * 2, life: 1, color: sparkColors[Math.floor(Math.random() * sparkColors.length)] });
         }
 
-        // ALGORITMO MELHORADO PARA NASCIMENTO LONGE DO PERIGO
         function getSafePosition() {
-            // O raio seguro adapta-se de forma inteligente ao tamanho atual do mapa dinâmico
             const safeDist = Math.min(2000, Math.max(800, CENTER * 0.3));
 
             for (let attempts = 0; attempts < 100; attempts++) {
@@ -1199,7 +1197,6 @@
                 }
                 if (isSafe) return { x, y };
             }
-            // Se falhar (mapa muito lotado), cai numa zona razoavelmente afastada do centro
             const fallbackAngle = Math.random() * Math.PI * 2;
             return { x: CENTER + Math.cos(fallbackAngle) * (CENTER - 500), y: CENTER + Math.sin(fallbackAngle) * (CENTER - 500) };
         }
@@ -1210,8 +1207,6 @@
 
             if (type === 'NORMAL' || type === 'FIREFLY') {
                 const angle = Math.random() * Math.PI * 2;
-                // Exponente alterado de 1.5 para 0.6: Permite espalhar os orbes muito melhor, ocupando
-                // o mapa quase por igual, deixando a tela repleta de comida e sem as antigas 'zonas vazias'.
                 const r = Math.pow(Math.random(), 0.6) * (CENTER - 50);
                 x = CENTER + Math.cos(angle) * r;
                 y = CENTER + Math.sin(angle) * r;
@@ -1221,13 +1216,13 @@
                 type = 'FIREFLY';
             }
 
-            let radius = 3.5 + Math.random() * 2; // Bolas base maiores e gordinhas (Era 2)
+            let radius = 3.5 + Math.random() * 2;
             let scoreValue = GAME_CONFIG.SCORE_PER_FOOD;
             let growthValue = GAME_CONFIG.GROWTH_PER_FOOD;
             let vx = 0, vy = 0;
 
             if (type === 'FIREFLY') {
-                radius = 8 + Math.random() * 3; // Super orbes voadoras
+                radius = 8 + Math.random() * 3;
                 scoreValue = GAME_CONFIG.FIREFLY_SCORE + (Math.random() * 25);
                 growthValue = scoreValue * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
                 const a = Math.random() * Math.PI * 2;
@@ -1238,7 +1233,7 @@
                 scoreValue = customScore;
                 growthValue = customScore * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
             } else if (type === 'BOOST') {
-                radius = 3.0; // Bolas largadas na corrida mais vistosas
+                radius = 3.0;
                 scoreValue = GAME_CONFIG.BOOST_SCORE_LOSS;
                 growthValue = GAME_CONFIG.BOOST_LENGTH_LOSS;
             }
@@ -1401,7 +1396,6 @@
 
             const lerpFactor = Math.min(1, 0.2 * dt);
 
-            // GESTÃO DINÂMICA DO TAMANHO DA ARENA E COMIDA EM MODO OFFLINE
             if (isOfflineMode) {
                 let totalMass = 0;
                 let activeEnts = 0;
@@ -1409,14 +1403,12 @@
                 bots.forEach(b => { if (!b.isDead) { totalMass += b.length; activeEnts++; } });
                 if (!player.isDead) { totalMass += player.length; activeEnts++; }
 
-                // O Mapa encolhe ou estica com base nas cobras e peso.
                 let targetSize = 4000 + (activeEnts * 100) + (totalMass * 3);
                 targetSize = Math.min(Math.max(targetSize, 4000), 25000);
 
                 GAME_CONFIG.WORLD_SIZE += (targetSize - GAME_CONFIG.WORLD_SIZE) * 0.0002 * dt;
                 CENTER = GAME_CONFIG.WORLD_SIZE / 2;
 
-                // População máxima de comida cresce com o tamanho do mapa de forma justa
                 GAME_CONFIG.TOTAL_FOOD = Math.floor((GAME_CONFIG.WORLD_SIZE * GAME_CONFIG.WORLD_SIZE) / 30000);
             }
 
@@ -1496,7 +1488,6 @@
                         }
                     }
 
-                    // Repovoação constante no modo Offline de acordo com a variação dinámica do mapa
                     if (foods.length < GAME_CONFIG.TOTAL_FOOD) {
                         foods.push(spawnFood('NORMAL'));
                     }
@@ -1665,7 +1656,6 @@
                             localStorage.setItem('cobraioHighScore', highScore);
                         }
                         if (!isOfflineMode) socket.emit('eatFood', f.id);
-                        // Repovoação garantida quando se come
                         if (isOfflineMode && foods.length < GAME_CONFIG.TOTAL_FOOD) foods.push(spawnFood('NORMAL'));
                     } else if (d < magnet) { f.x += (player.x - f.x) * GAME_CONFIG.MAGNET_STRENGTH; f.y += (player.y - f.y) * GAME_CONFIG.MAGNET_STRENGTH; }
                 }
@@ -1891,7 +1881,11 @@
             if (camera.zoom < 0.6) bgLod = 2;
             if (camera.zoom < 0.35) bgLod = 3;
 
-            const r = 40 * bgLod;
+            let baseHexR = 40;
+            if (currentDevice === 'MOBILE') baseHexR = 22; // Mais pequeno para telemóveis
+            else if (currentDevice === 'TABLET') baseHexR = 30;
+
+            const r = baseHexR * bgLod;
             const w = Math.sqrt(3) * r;
             const h = 2 * r;
             const offY = h * 0.75;
