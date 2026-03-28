@@ -11,54 +11,51 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
+// =============================================================
+// --- BLOCO DE CONFIGURAÇÃO DA IA E COMPORTAMENTO (BOTS) ---
+// =============================================================
+const BOT_AI_CONFIG = {
+    TYPES: ['NATIVE', 'SCRIPT'],
+    SCRIPT_CHANCE: 0.20,
+    VISION_RAY_NATIVE: 400,
+    VISION_RAY_SCRIPT: 800,
+    FOOD_SENSE_RADIUS: 900,          // Raio que o Bot usa para cheirar a comida
+    COIL_CHANCE: 0.002,
+    PANIC_BOOST_CHANCE: 0.30,
+    FARM_BOOST_CHANCE: 0.50
+};
+
 // =================================================================
-// --- CONFIGURAÇÕES DO JOGO (100% Sincronizadas com o Front-end) ---
+// --- CONFIGURAÇÕES DO JOGO (Sincronizadas com o Front-end) ---
 // =================================================================
 const GAME_CONFIG = {
-    WORLD_SIZE: 9000,                 
-    TOTAL_FOOD: 2000,                 // Aumentado para manter a abundância com o novo ecossistema
+    WORLD_SIZE: 9000,
+    TOTAL_FOOD: 2000,
 
-    SNAKE_INITIAL_LENGTH: 30,         
-
-    // Espessura inicial separada por plataforma:
-    SNAKE_INITIAL_RADIUS_MOBILE: 12,
-    SNAKE_INITIAL_RADIUS_TABLET: 15,
-    SNAKE_INITIAL_RADIUS_PC: 18,
-
-    // O servidor usa o rádio de PC como padrão para os Bots:
-    get SNAKE_INITIAL_RADIUS() { return this.SNAKE_INITIAL_RADIUS_PC; },
-
-    SNAKE_MAX_RADIUS: 38,             
+    SNAKE_INITIAL_LENGTH: 30,
+    SNAKE_INITIAL_RADIUS: 18, // Fallback para servidor
+    SNAKE_MAX_RADIUS: 38,
     SNAKE_HISTORY_STEP: 1,
     SNAKE_HISTORY_SPACING: 5,
     SNAKE_BASE_SPEED: 4.0,
 
-    SNAKE_HITBOX_SIZE: 0.65,          // Reduzido para maior precisão (mais difícil de bater)
+    SNAKE_HITBOX_SIZE: 0.65,
     SNAKE_TURN_SPEED: 0.035,
     SNAKE_TURN_SPEED_BOOST: 0.015,
 
-    // --- NOVO BALANÇO CHALLENGING (Crescimento reduzido a metade) ---
-    GROWTH_PER_FOOD: 1.5,             
-    SCORE_PER_FOOD: 8,               
-    DEATH_GROWTH: 5.625,              // Proporcional: (30 / 8) * 1.5
-    DEATH_SCORE: 30,                  
-    
-    WIDTH_GROWTH_FACTOR: 0.15,        // Crescimento de largura ainda mais subtil
-    MAX_HISTORY_LENGTH: 50000,        
+    GROWTH_PER_FOOD: 1.5,
+    SCORE_PER_FOOD: 8,
+    DEATH_GROWTH: 5.625,
+    DEATH_SCORE: 30,
 
-    // Sincronização do Boost para evitar o ecrã divergir da pontuação
-    BOOST_SPEED_MULT: 2.0,            
-    BOOST_SCORE_LOSS: 2,              
-    BOOST_LENGTH_LOSS: 0.375,         
-    BOOST_MIN_LENGTH: 40,             
-    
-    // --- NOVAS CONFIGURAÇÕES DE ECOSSISTEMA DE COMIDA (v1.9.5) ---
-    FOOD_GROWTH_RATE: 0.04,           // Velocidade de crescimento das bolinhas normais
-    FIREFLY_SPAWN_CHANCE: 0.02,       // 2% de chance de nascer uma presa móvel (Vagalume)
-    FIREFLY_SCORE: 75,                // Pontos base do vagalume
-    FIREFLY_SPEED: 2.2,               // Velocidade de fuga
-    DEATH_FOOD_RADIUS: 5.0,           // Tamanho base maior para restos
-    DEATH_DROP_PERCENTAGE: 0.22,      // Drop de ~22% da massa
+    WIDTH_GROWTH_FACTOR: 0.15,
+    MAX_HISTORY_LENGTH: 50000,
+
+    BOOST_SPEED_MULT: 2.0,
+    BOOST_SCORE_LOSS: 2,
+    BOOST_LENGTH_LOSS: 0.375,
+    BOOST_MIN_LENGTH: 40,
+    BOOST_FRAMES_PER_DROP: 2,
 
     MAGNET_STRENGTH: 0.3,
     MAGNET_RADIUS_MULT: 3.0,
@@ -68,7 +65,12 @@ const GAME_CONFIG = {
     BOT_VISION_RADIUS: 1500,
 
     SERVER_TICK_RATE: 25,
-    GRID_SIZE: 450
+    GRID_SIZE: 450,
+
+    // ECOSSISTEMA DE COMIDA
+    FIREFLY_SCORE: 75,
+    DEATH_FOOD_RADIUS: 5.0,
+    DEATH_DROP_PERCENTAGE: 0.22
 };
 
 const CENTER = GAME_CONFIG.WORLD_SIZE / 2;
@@ -79,7 +81,8 @@ let bots = [];
 const foods = [];
 let spatialGrid = {};
 
-const botNames = ['SlitherMaster', 'Viper', 'NeonSnake', 'CobraQueen', 'Toxic', 'Ghost', 'Shadow', 'Flash', 'Apex', 'Titan', 'Zilla', 'Mamba', 'Racer', 'Venom'];
+const botNames = ['SlitherMaster', 'Viper', 'NeonSnake', 'CobraQueen', 'Toxic', 'Ghost', 'Shadow', 'Flash', 'Apex', 'Titan', 'Zilla', 'Mamba', 'Racer', 'Venom', '[BOT] Sweeper', 'AutoPlay.js'];
+const neonColors = ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff', '#e0e0ff', '#ff00aa'];
 
 // --- FUNÇÕES UTILITÁRIAS ---
 
@@ -95,30 +98,22 @@ function getEntityRadius(length) {
 function spawnFood(type = 'NORMAL', srcX, srcY, customScore = 0) {
     let x = srcX, y = srcY;
 
-    // Densidade maior no centro (Curva Exponencial) - Paridade v1.9.5
     if (type === 'NORMAL' || type === 'FIREFLY') {
         const angle = Math.random() * Math.PI * 2;
-        const r = Math.pow(Math.random(), 1.5) * (CENTER - 50);
+        // Elevado ao quadrado (2) para forçar uma densidade muito maior no centro da arena
+        const r = Math.pow(Math.random(), 2) * (CENTER - 50);
         x = CENTER + Math.cos(angle) * r;
         y = CENTER + Math.sin(angle) * r;
-    }
-
-    if (type === 'NORMAL' && Math.random() < GAME_CONFIG.FIREFLY_SPAWN_CHANCE) {
-        type = 'FIREFLY';
     }
 
     let radius = 2;
     let scoreValue = GAME_CONFIG.SCORE_PER_FOOD;
     let growthValue = GAME_CONFIG.GROWTH_PER_FOOD;
-    let vx = 0, vy = 0;
 
     if (type === 'FIREFLY') {
         radius = 6 + Math.random() * 2;
         scoreValue = GAME_CONFIG.FIREFLY_SCORE + (Math.random() * 25);
         growthValue = scoreValue * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
-        const a = Math.random() * Math.PI * 2;
-        vx = Math.cos(a) * GAME_CONFIG.FIREFLY_SPEED;
-        vy = Math.sin(a) * GAME_CONFIG.FIREFLY_SPEED;
     } else if (type === 'DEATH') {
         radius = GAME_CONFIG.DEATH_FOOD_RADIUS + Math.random() * 2.5;
         scoreValue = customScore;
@@ -133,13 +128,11 @@ function spawnFood(type = 'NORMAL', srcX, srcY, customScore = 0) {
         id: Math.random().toString(36).substr(2, 9),
         type: type,
         x: x, y: y,
-        vx: vx, vy: vy,
         radius: radius,
-        targetRadius: type === 'NORMAL' ? radius + Math.random() * 3 + 1 : radius,
-        color: ['#ff0055', '#00ffaa', '#00ddff', '#ffdd00', '#ff6600', '#aa00ff'][Math.floor(Math.random() * 6)],
-        phase: Math.random() * Math.PI * 2,
+        color: neonColors[Math.floor(Math.random() * neonColors.length)],
         scoreValue: scoreValue,
-        growthValue: growthValue
+        growthValue: growthValue,
+        isDeathFood: type === 'DEATH' // Retrocompatibilidade
     };
 }
 
@@ -197,6 +190,7 @@ function getSafePosition() {
 
 function createBot() {
     const pos = getSafePosition();
+    const type = Math.random() < BOT_AI_CONFIG.SCRIPT_CHANCE ? 'SCRIPT' : 'NATIVE';
     const isBoss = Math.random() < 0.25;
 
     const initialScore = isBoss ? 500 + Math.random() * 1500 : 50 + Math.random() * 100;
@@ -205,18 +199,24 @@ function createBot() {
 
     return {
         id: 'bot-' + Math.random().toString(36).substr(2, 9),
-        name: botNames[Math.floor(Math.random() * botNames.length)] + (isBoss ? ' [BOSS]' : ''),
+        name: botNames[Math.floor(Math.random() * botNames.length)],
+        botType: type,
         x: pos.x, y: pos.y, angle: Math.random() * Math.PI * 2, targetAngle: Math.random() * Math.PI * 2,
         score: initialScore, length: initialLength, radius: initialRadius,
         history: Array.from({ length: Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(initialLength * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 10) }, () => ({ x: pos.x, y: pos.y })),
-        skinIndex: Math.floor(Math.random() * 10), aiTimer: 0, speed: GAME_CONFIG.SNAKE_BASE_SPEED, isDead: false, distAccum: 0
+        skinIndex: Math.floor(Math.random() * 15), aiTimer: 0, aiState: 'WANDER', speed: GAME_CONFIG.SNAKE_BASE_SPEED, isDead: false, distAccum: 0
     };
 }
 
-function killBot(bot) {
+function killBot(bot, hitBorder = false) {
     if (!bot || bot.isDead) return;
     bot.isDead = true;
-    dropDeathFood(bot);
+
+    // Regra da Borda: Se morreu ao bater na borda, NÃO larga comida (desaparece)
+    if (!hitBorder) {
+        dropDeathFood(bot);
+    }
+
     io.emit('botDied', { id: bot.id, x: bot.x, y: bot.y });
     const idx = bots.indexOf(bot);
     if (idx !== -1) bots.splice(idx, 1);
@@ -224,7 +224,7 @@ function killBot(bot) {
 }
 
 for (let i = 0; i < GAME_CONFIG.NUM_BOTS; i++) bots.push(createBot());
-for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) foods.push(spawnFood());
+for (let i = 0; i < GAME_CONFIG.TOTAL_FOOD; i++) foods.push(spawnFood('NORMAL'));
 
 // --- LÓGICA DE COLISÃO (HITBOX AAA) ---
 function checkCollision(head, target) {
@@ -233,13 +233,10 @@ function checkCollision(head, target) {
     const headRadius = head.radius || GAME_CONFIG.SNAKE_INITIAL_RADIUS;
     const targetRadius = target.radius || GAME_CONFIG.SNAKE_INITIAL_RADIUS;
 
-    // Ponta do nariz empurrada para o limite exterior (0.8)
     const tipX = head.x + Math.cos(head.angle) * (headRadius * 0.8);
     const tipY = head.y + Math.sin(head.angle) * (headRadius * 0.8);
 
-    // Hitbox rigorosa: Nariz contra raio visual efetivo do inimigo
     const thresholdSq = (headRadius * 0.2 + targetRadius * GAME_CONFIG.SNAKE_HITBOX_SIZE) ** 2;
-
     const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
     const maxIdx = Math.min(Math.floor((target.length || GAME_CONFIG.SNAKE_INITIAL_LENGTH) * spacing), target.history.length - 1, GAME_CONFIG.MAX_HISTORY_LENGTH - 1);
 
@@ -254,18 +251,17 @@ function checkCollision(head, target) {
 
 function dropDeathFood(snake) {
     if (!snake || !snake.history || snake.score <= 0) return;
+    const newFoods = [];
 
-    // Cobra larga apenas 22% da sua massa (Paridade v1.9.5)
+    // A cobra larga a mesma massa e orbes no servidor que larga no modo offline
     const dropPercentage = GAME_CONFIG.DEATH_DROP_PERCENTAGE + (Math.random() * 0.03);
     const totalDropScore = snake.score * dropPercentage;
 
     const spacing = GAME_CONFIG.SNAKE_HISTORY_SPACING;
-    const segments = Math.min(Math.floor(snake.length), Math.floor(snake.history.length / spacing));
+    const segments = Math.min(Math.floor(snake.length), Math.floor((snake.history.length || 0) / spacing));
 
-    // 2 a 3 orbes por segmento corporal
     const numFoods = Math.max(1, segments * 2);
     const scorePerFood = totalDropScore / numFoods;
-    const newFoods = [];
 
     for (let i = 0; i < segments; i++) {
         const pos = i === 0 ? { x: snake.x, y: snake.y } : snake.history[i * spacing];
@@ -273,7 +269,7 @@ function dropDeathFood(snake) {
 
         const r1 = Math.random() * (snake.radius * 0.6), a1 = Math.random() * Math.PI * 2;
         const f1 = spawnFood('DEATH', pos.x + Math.cos(a1) * r1, pos.y + Math.sin(a1) * r1, scorePerFood);
-        
+
         const r2 = Math.random() * (snake.radius * 0.6), a2 = Math.random() * Math.PI * 2;
         const f2 = spawnFood('DEATH', pos.x + Math.cos(a2) * r2, pos.y + Math.sin(a2) * r2, scorePerFood);
 
@@ -284,88 +280,111 @@ function dropDeathFood(snake) {
     if (newFoods.length > 0) io.emit('deathResidue', newFoods);
 }
 
-// --- LOOP PRINCIPAL (TICK) ---
-setInterval(() => {
-    updateSpatialGrid();
+// INTEGRIDADE DA INTELIGÊNCIA ARTIFICIAL DOS BOTS (HUNGER & COIL)
+function processBotAI(bot, dt) {
+    bot.aiTimer = (bot.aiTimer || 0) - dt;
+    bot.isBoosting = false;
 
-    // --- DINÂMICA DA COMIDA (v1.9.5) ---
-    const dt = SERVER_DT;
-    for (let f of foods) {
-        // Crescimento Orgânico
-        if (f.type === 'NORMAL' && f.radius < f.targetRadius) {
-            f.radius += GAME_CONFIG.FOOD_GROWTH_RATE * dt;
-            f.scoreValue += (GAME_CONFIG.FOOD_GROWTH_RATE * 2) * dt;
-            f.growthValue = f.scoreValue * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
-        }
+    let danger = false;
+    let dangerAngle = 0;
+    const rayDist = bot.botType === 'SCRIPT' ? BOT_AI_CONFIG.VISION_RAY_SCRIPT : BOT_AI_CONFIG.VISION_RAY_NATIVE;
+    const headX = bot.x + Math.cos(bot.angle) * rayDist;
+    const headY = bot.y + Math.sin(bot.angle) * rayDist;
 
-        // IA de Fuga dos Vagalumes
-        if (f.type === 'FIREFLY') {
-            for (let pId in players) {
-                const p = players[pId];
-                if (!p.isDead) {
-                    const dToPlayer = Math.hypot(p.x - f.x, p.y - f.y);
-                    if (dToPlayer < 400) {
-                        const escapeAngle = Math.atan2(f.y - p.y, f.x - p.x);
-                        f.vx += Math.cos(escapeAngle) * 0.3 * dt;
-                        f.vy += Math.sin(escapeAngle) * 0.3 * dt;
-                    }
-                }
-            }
-
-            let speed = Math.hypot(f.vx, f.vy);
-            if (speed > GAME_CONFIG.FIREFLY_SPEED * 2) {
-                f.vx = (f.vx / speed) * GAME_CONFIG.FIREFLY_SPEED * 2;
-                f.vy = (f.vy / speed) * GAME_CONFIG.FIREFLY_SPEED * 2;
-            } else if (speed < GAME_CONFIG.FIREFLY_SPEED) {
-                f.vx *= 1.05; f.vy *= 1.05;
-            }
-
-            f.x += f.vx * dt; f.y += f.vy * dt;
-            if (Math.hypot(f.x - CENTER, f.y - CENTER) > CENTER - 50) { f.vx *= -1; f.vy *= -1; }
+    const entities = [...Object.values(players), ...bots];
+    for (let ent of entities) {
+        if (ent.id === bot.id || ent.isDead) continue;
+        if (Math.hypot(headX - ent.x, headY - ent.y) < ent.radius * 2 + 50) {
+            danger = true;
+            dangerAngle = Math.atan2(ent.y - bot.y, ent.x - bot.x);
+            break;
         }
     }
 
-    bots.forEach(bot => {
-        if (bot.isDead) return;
-        const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
-        let fleeAngle = null;
-
-        if (distToCenter > CENTER - 350) {
-            fleeAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
+    if (danger) {
+        if (bot.botType === 'SCRIPT' && bot.length > 100) {
+            bot.aiState = 'COIL';
+            bot.coilDir = Math.sign(Math.sin(bot.angle - dangerAngle)) || 1;
+            bot.aiTimer = 100;
         } else {
-            const visionRadius = GAME_CONFIG.BOT_VISION_RADIUS;
-            const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE), gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
+            bot.targetAngle = dangerAngle + Math.PI + (Math.random() - 0.5);
+            if (Math.random() < BOT_AI_CONFIG.PANIC_BOOST_CHANCE && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) {
+                bot.isBoosting = true;
+            }
+            bot.aiState = 'FLEE';
+            bot.aiTimer = 15;
+        }
+        return;
+    }
 
-            for (let x = -1; x <= 1; x++) {
-                for (let y = -1; y <= 1; y++) {
-                    const neighbors = spatialGrid[`${gx + x},${gy + y}`];
-                    if (neighbors) {
-                        for (let other of neighbors) {
-                            if (other.id === bot.id || !other.history) continue;
-                            for (let i = 0; i < other.history.length; i += 10) {
-                                const seg = other.history[i];
-                                if (!seg) continue;
-                                if (Math.hypot(bot.x - seg.x, bot.y - seg.y) < visionRadius) {
-                                    fleeAngle = Math.atan2(bot.y - seg.y, bot.x - seg.x); break;
-                                }
-                            }
-                            if (fleeAngle !== null) break;
-                        }
-                    }
-                    if (fleeAngle !== null) break;
+    if (bot.botType === 'SCRIPT' && bot.length > 100 && Math.random() < BOT_AI_CONFIG.COIL_CHANCE && bot.aiState !== 'COIL') {
+        bot.aiState = 'COIL';
+        bot.aiTimer = 200;
+        bot.coilDir = Math.random() < 0.5 ? 1 : -1;
+    }
+
+    if (bot.aiState === 'COIL') {
+        bot.targetAngle += 0.08 * bot.coilDir * dt;
+        if (bot.aiTimer <= 0) bot.aiState = 'WANDER';
+        return;
+    }
+
+    if (bot.aiTimer <= 0) {
+        let bestFood = null;
+        let bestScore = -1;
+
+        // O BOT AGORA CAÇA ATIVAMENTE A COMIDA (O CHEIRO DA COMIDA)
+        for (let f of foods) {
+            let dist = Math.hypot(bot.x - f.x, bot.y - f.y);
+            if (dist < BOT_AI_CONFIG.FOOD_SENSE_RADIUS) {
+                let value = f.type === 'DEATH' || f.type === 'FIREFLY' ? 50 : 1;
+                let score = value / Math.max(1, dist);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestFood = f;
                 }
             }
         }
 
-        if (fleeAngle !== null) { bot.targetAngle = fleeAngle; bot.aiTimer = 10; }
-        else if (--bot.aiTimer <= 0) { bot.targetAngle += (Math.random() - 0.5) * 2; bot.aiTimer = 40 + Math.random() * 60; }
+        if (bestFood) {
+            bot.targetAngle = Math.atan2(bestFood.y - bot.y, bestFood.x - bot.x);
+            bot.aiState = 'FARMING';
+
+            if (bot.botType === 'SCRIPT' && (bestFood.type === 'DEATH' || bestFood.type === 'FIREFLY') && Math.random() < BOT_AI_CONFIG.FARM_BOOST_CHANCE && bot.length > GAME_CONFIG.BOOST_MIN_LENGTH) {
+                bot.isBoosting = true;
+            }
+        } else {
+            bot.aiState = 'WANDER';
+            bot.targetAngle += (Math.random() - 0.5) * 1.5;
+        }
+        bot.aiTimer = 15 + Math.random() * 20;
+    }
+}
+
+// --- LOOP PRINCIPAL DO SERVIDOR (TICK) ---
+setInterval(() => {
+    updateSpatialGrid();
+
+    bots.forEach(bot => {
+        if (bot.isDead) return;
+
+        const distToCenter = Math.hypot(bot.x - CENTER, bot.y - CENTER);
+
+        if (distToCenter > CENTER - 350) {
+            bot.targetAngle = Math.atan2(CENTER - bot.y, CENTER - bot.x);
+            bot.aiTimer = 10;
+        } else {
+            // Executar a IA Inteligente para ir atrás da comida
+            processBotAI(bot, SERVER_DT);
+        }
 
         let diff = bot.targetAngle - bot.angle;
         while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2;
         bot.angle += diff * 0.1 * SERVER_DT;
 
-        const moveSpeed = bot.speed * SERVER_DT;
-        bot.x += Math.cos(bot.angle) * moveSpeed; bot.y += Math.sin(bot.angle) * moveSpeed;
+        const moveSpeed = (bot.isBoosting ? GAME_CONFIG.SNAKE_BASE_SPEED * GAME_CONFIG.BOOST_SPEED_MULT : GAME_CONFIG.SNAKE_BASE_SPEED) * SERVER_DT;
+        bot.x += Math.cos(bot.angle) * moveSpeed;
+        bot.y += Math.sin(bot.angle) * moveSpeed;
 
         const pVx = Math.cos(bot.angle), pVy = Math.sin(bot.angle);
         bot.distAccum = (bot.distAccum || 0) + moveSpeed;
@@ -376,7 +395,8 @@ setInterval(() => {
         const targetLen = Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(bot.length * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1);
         if (bot.history.length > targetLen) bot.history.length = targetLen;
 
-        if (distToCenter > CENTER - bot.radius * 0.8) killBot(bot);
+        // Se o bot bater na borda da arena, morre sem deixar comida!
+        if (distToCenter > CENTER - bot.radius * 0.8) killBot(bot, true);
 
         if (!bot.isDead) {
             const gx = Math.floor(bot.x / GAME_CONFIG.GRID_SIZE), gy = Math.floor(bot.y / GAME_CONFIG.GRID_SIZE);
@@ -386,9 +406,8 @@ setInterval(() => {
                     const neighbors = spatialGrid[`${gx + x},${gy + y}`];
                     if (neighbors) {
                         for (let other of neighbors) {
-                            // Se o bot encostar noutra entidade, ELE morre!
                             if (other.id !== bot.id && checkCollision(bot, other)) {
-                                killBot(bot); collisionTriggered = true; break;
+                                killBot(bot, false); collisionTriggered = true; break;
                             }
                         }
                     }
@@ -396,20 +415,25 @@ setInterval(() => {
             }
         }
 
+        // BOCA MAGNÉTICA (Evita que os bots passem em cima da comida sem comer)
         for (let i = foods.length - 1; i >= 0; i--) {
-            const f = foods[i], distSq = (bot.x - f.x) ** 2 + (bot.y - f.y) ** 2, eatThreshold = bot.radius + (f.radius || 2.5);
-            if (distSq < eatThreshold ** 2) {
-                const foodId = f.id; foods.splice(i, 1);
-                
-                const pts = f.scoreValue || GAME_CONFIG.SCORE_PER_FOOD;
-                const growth = f.growthValue || GAME_CONFIG.GROWTH_PER_FOOD;
+            const f = foods[i];
+            const distSq = (bot.x - f.x) ** 2 + (bot.y - f.y) ** 2;
 
-                bot.score += pts;
+            // Raio de colisão ampliado (efeito magnético) para que não escorreguem!
+            const eatThreshold = (bot.radius * 1.5) + (f.radius || 3);
+
+            if (distSq < eatThreshold ** 2) {
+                const foodId = f.id;
+                foods.splice(i, 1);
+
+                bot.score += f.scoreValue || (f.type === 'DEATH' ? GAME_CONFIG.DEATH_SCORE : GAME_CONFIG.SCORE_PER_FOOD);
                 bot.length = calculateLengthFromScore(bot.score);
                 bot.radius = getEntityRadius(bot.length);
 
                 if (foods.length < GAME_CONFIG.TOTAL_FOOD) {
-                    const newFood = spawnFood('NORMAL'); foods.push(newFood);
+                    const newFood = spawnFood('NORMAL');
+                    foods.push(newFood);
                     io.emit('foodEaten', { foodId, newFood });
                 } else {
                     io.emit('foodEaten', { foodId, newFood: null });
@@ -444,7 +468,6 @@ io.on('connection', (socket) => {
             id: socket.id, name: data.name || 'Convidado',
             x: pos.x, y: pos.y, angle: 0, score: 0,
             length: GAME_CONFIG.SNAKE_INITIAL_LENGTH, radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
-            // CORREÇÃO CRÍTICA 1: Iniciar corpo na entrada. Sem isto, o bot atravessava um fantasma.
             history: Array.from({ length: Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(GAME_CONFIG.SNAKE_INITIAL_LENGTH * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 10) }, () => ({ x: pos.x, y: pos.y })),
             skinIndex: data.skinIndex || 0, isDead: false
         };
@@ -471,8 +494,6 @@ io.on('connection', (socket) => {
 
             if (!p.history) p.history = [];
 
-            // CORREÇÃO CRÍTICA 2: O sistema agora rastreia o movimento EXATAMENTE como no cliente
-            // Não há mais perda de decimais (pixels engolidos) que deixavam o rabo curto
             if (distMoved > 0.001) {
                 const pVx = dx / distMoved;
                 const pVy = dy / distMoved;
@@ -515,7 +536,7 @@ io.on('connection', (socket) => {
 
                 let newFood = null;
                 if (foods.length < GAME_CONFIG.TOTAL_FOOD) {
-                    newFood = spawnFood();
+                    newFood = spawnFood('NORMAL');
                     foods.push(newFood);
                 }
                 io.emit('foodEaten', { foodId, newFood });
@@ -527,7 +548,15 @@ io.on('connection', (socket) => {
         const p = players[socket.id];
         if (p && !p.isDead) {
             p.isDead = true;
-            dropDeathFood(p);
+
+            // Verifica se a morte do jogador foi provocada por bater na borda (com tolerância de lag)
+            const distToCenter = Math.hypot(p.x - CENTER, p.y - CENTER);
+            const isBorderDeath = distToCenter >= CENTER - (p.radius * 0.8) - 100;
+
+            if (!isBorderDeath) {
+                dropDeathFood(p);
+            }
+
             io.emit('botDied', { id: p.id, x: p.x, y: p.y });
             delete players[socket.id];
             io.emit('playerLeft', socket.id);
@@ -537,7 +566,13 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         const p = players[socket.id];
         if (p && !p.isDead) {
-            dropDeathFood(p);
+            const distToCenter = Math.hypot(p.x - CENTER, p.y - CENTER);
+            const isBorderDeath = distToCenter >= CENTER - (p.radius * 0.8) - 100;
+
+            if (!isBorderDeath) {
+                dropDeathFood(p);
+            }
+
             delete players[socket.id];
             io.emit('playerLeft', socket.id);
         }
