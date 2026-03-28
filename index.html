@@ -826,7 +826,7 @@
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
-            SNAKE_HITBOX_SIZE: 0.80,    // Aumentado (0.80) para impedir fisicamente atravessamentos
+            SNAKE_HITBOX_SIZE: 0.80,
             SNAKE_TURN_SPEED: 0.035,
             SNAKE_TURN_SPEED_BOOST: 0.015,
 
@@ -920,23 +920,34 @@
             score: 0, boostCounter: 0, name: '', isTop1: false, distAccum: 0, isDead: false
         };
 
-        // --- SKINS ---
+        // =============================================================
+        // --- COBERTURA TOTAL DE SKINS (BANDEIRAS, ANATOMIAS E AAA) ---
+        // =============================================================
         const skins = [
-            { name: 'Clássica (USA)', getBodyColor: (isDark) => isDark ? ['#444444', '#0a0a0a'] : ['#ffffff', '#777777'], getTailColor: (p) => p <= 4 ? { c1: '#4466ff', c2: '#001166', stars: true } : p <= 6 ? { c1: '#ff4444', c2: '#660000' } : p <= 8 ? { c1: '#ffffff', c2: '#888888' } : null },
-            { name: 'Tóxica Neon', getBodyColor: (isDark) => isDark ? ['#005500', '#001100'] : ['#00ff00', '#007700'] },
-            { name: 'Cyberpunk', getBodyColor: (isDark) => isDark ? ['#ff00aa', '#550033'] : ['#00ddff', '#005577'], getTailColor: (p) => p <= 4 ? { c1: '#ffffff', c2: '#aaaaaa' } : null },
-            { name: 'Tigre de Fogo', getBodyColor: (isDark) => isDark ? ['#111111', '#000000'] : ['#ff8800', '#aa3300'] },
-            { name: 'Espectro', getBodyColor: (isDark) => isDark ? ['#aaddff', '#5588aa'] : ['#ffffff', '#bbddff'], getTailColor: (p) => p <= 6 ? { c1: '#ffffff', c2: '#dddddd' } : null },
-            { name: 'Arco-íris', getBodyColor: (isDark, i, segs) => { const h = (i / Math.max(segs, 1)) * 360; return isDark ? [`hsl(${h}, 100%, 35%)`, `hsl(${h}, 100%, 15%)`] : [`hsl(${h}, 100%, 60%)`, `hsl(${h}, 100%, 40%)`]; } },
-            { name: 'Dourada Premium', getBodyColor: (isDark) => isDark ? ['#cca600', '#665300'] : ['#ffdd00', '#aa9400'], getTailColor: (p) => p <= 3 ? { c1: '#ffffff', c2: '#aaaaaa' } : null },
-            { name: 'Zebra', getBodyColor: (isDark) => isDark ? ['#111111', '#000000'] : ['#ffffff', '#aaaaaa'] },
-            { name: 'Galáxia', getBodyColor: (isDark) => isDark ? ['#1a0033', '#0d001a'] : ['#aa00ff', '#550088'], getTailColor: (p) => p <= 5 ? { c1: '#00ddff', c2: '#005588' } : null },
-            { name: 'Lava', getBodyColor: (isDark) => isDark ? ['#880000', '#440000'] : ['#ff4400', '#aa2200'], getTailColor: (p) => p <= 4 ? { c1: '#ffdd00', c2: '#ff8800' } : null },
-            { name: 'Ciclope Mutante', isCyclops: true, eyeColor: '#ffcc00', getBodyColor: (isDark) => isDark ? ['#2b4a1a', '#182b0f'] : ['#56ab2f', '#3a7d20'] },
-            { name: 'Fantasma', eyeColor: '#00ffff', getBodyColor: (isDark) => isDark ? ['#e6ffff', '#99ccff'] : ['#ffffff', '#cce6ff'] },
-            { name: 'Máquina de Guerra', isCyclops: true, eyeColor: '#ffdd00', getBodyColor: (isDark) => isDark ? ['#333333', '#111111'] : ['#888888', '#555555'], getTailColor: (p) => p <= 3 ? { c1: '#ff4400', c2: '#aa0000' } : null },
-            { name: 'Dragão d\'Água', getBodyColor: (isDark) => isDark ? ['#003366', '#001133'] : ['#00ddff', '#0088cc'], getTailColor: (p) => p <= 5 ? { c1: '#ffffff', c2: '#aaddff' } : null },
-            { name: 'Demoníaca', eyeColor: '#ffff00', getBodyColor: (isDark) => isDark ? ['#000000', '#000000'] : ['#ff0000', '#aa0000'] }
+            // PAÍSES / BANDEIRAS
+            { name: 'Portugal', eyes: 2, getBodyColor: (isDark, i) => { const c = [['#006600', '#004400'], ['#ff0000', '#cc0000'], ['#ffcc00', '#cc9900']]; return c[i % 3]; } },
+            { name: 'Brasil', eyes: 2, getBodyColor: (isDark, i) => { const c = [['#009c3b', '#007a2e'], ['#ffdf00', '#ccb200'], ['#002776', '#001b52']]; return c[i % 3]; } },
+            { name: 'USA', eyes: 2, getBodyColor: (isDark, i) => { const c = [['#b22234', '#8a1826'], ['#ffffff', '#cccccc'], ['#3c3b6e', '#29284d']]; return c[i % 3]; } },
+            { name: 'França', eyes: 2, getBodyColor: (isDark, i) => { const c = [['#002395', '#001661'], ['#ffffff', '#cccccc'], ['#ed2939', '#ba1b29']]; return c[i % 3]; } },
+            { name: 'Espanha', eyes: 2, getBodyColor: (isDark, i) => { const c = [['#aa151b', '#800e13'], ['#f1bf00', '#c49a00']]; return c[i % 2]; } },
+
+            // LACRAIAS / CENTOPEIAS
+            { name: 'Lacraia Tóxica', eyes: 2, isCentipede: true, legColor: '#00ffaa', getBodyColor: (isDark) => isDark ? ['#003311', '#001a08'] : ['#008833', '#00551a'] },
+            { name: 'Lacraia de Fogo', eyes: 2, isCentipede: true, legColor: '#ffdd00', getBodyColor: (isDark) => isDark ? ['#440000', '#220000'] : ['#aa2200', '#881100'] },
+
+            // COM ASAS (DRAGÕES E ANJOS)
+            { name: 'Dragão Imperial', eyes: 2, hasWings: true, wingColor: '#ff2200', getBodyColor: (isDark) => isDark ? ['#440000', '#220000'] : ['#aa0000', '#880000'] },
+            { name: 'Anjo Guardião', eyes: 2, hasWings: true, wingColor: 'rgba(255, 255, 255, 0.85)', getBodyColor: (isDark) => isDark ? ['#ccddff', '#99aabb'] : ['#ffffff', '#ddeeff'] },
+
+            // CICLOPES (1 OLHO)
+            { name: 'Ciclope Mutante', eyes: 1, eyeColor: '#ffcc00', getBodyColor: (isDark) => isDark ? ['#2b4a1a', '#182b0f'] : ['#56ab2f', '#3a7d20'] },
+            { name: 'Monstro Abissal', eyes: 1, eyeColor: '#ff0055', getBodyColor: (isDark) => isDark ? ['#110022', '#000011'] : ['#330055', '#220033'] },
+
+            // CLÁSSICOS E NEONS
+            { name: 'Neon Cyberpunk', eyes: 2, getBodyColor: (isDark) => isDark ? ['#ff00aa', '#550033'] : ['#00ddff', '#005577'] },
+            { name: 'Arco-íris', eyes: 2, getBodyColor: (isDark, i, segs) => { const h = (i / Math.max(segs, 1)) * 360; return isDark ? [`hsl(${h}, 100%, 35%)`, `hsl(${h}, 100%, 15%)`] : [`hsl(${h}, 100%, 60%)`, `hsl(${h}, 100%, 40%)`]; } },
+            { name: 'Zebra', eyes: 2, getBodyColor: (isDark) => isDark ? ['#111111', '#000000'] : ['#ffffff', '#aaaaaa'] },
+            { name: 'Dourada Premium', eyes: 2, getBodyColor: (isDark) => isDark ? ['#cca600', '#665300'] : ['#ffdd00', '#aa9400'] }
         ];
         let currentSkinIndex = 0;
 
@@ -1198,7 +1209,6 @@
         function spawnFood(type = 'NORMAL', srcX, srcY, customScore = 0) {
             let x = srcX, y = srcY;
 
-            // Densidade maior no centro (Curva Exponencial)
             if (type === 'NORMAL' || type === 'FIREFLY') {
                 const angle = Math.random() * Math.PI * 2;
                 const r = Math.pow(Math.random(), 1.5) * (CENTER - 50);
@@ -1216,14 +1226,14 @@
             let vx = 0, vy = 0;
 
             if (type === 'FIREFLY') {
-                radius = 6 + Math.random() * 2; // Gigante
-                scoreValue = GAME_CONFIG.FIREFLY_SCORE + (Math.random() * 25); // 75 a 100
+                radius = 6 + Math.random() * 2;
+                scoreValue = GAME_CONFIG.FIREFLY_SCORE + (Math.random() * 25);
                 growthValue = scoreValue * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
                 const a = Math.random() * Math.PI * 2;
                 vx = Math.cos(a) * GAME_CONFIG.FIREFLY_SPEED;
                 vy = Math.sin(a) * GAME_CONFIG.FIREFLY_SPEED;
             } else if (type === 'DEATH') {
-                radius = GAME_CONFIG.DEATH_FOOD_RADIUS + Math.random() * 2.5; // Restos maiores
+                radius = GAME_CONFIG.DEATH_FOOD_RADIUS + Math.random() * 2.5;
                 scoreValue = customScore;
                 growthValue = customScore * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
             } else if (type === 'BOOST') {
@@ -1238,7 +1248,7 @@
                 x: x, y: y,
                 vx: vx, vy: vy,
                 radius: radius,
-                targetRadius: type === 'NORMAL' ? radius + Math.random() * 3 + 1 : radius, // Comida cresce até ~6 radius
+                targetRadius: type === 'NORMAL' ? radius + Math.random() * 3 + 1 : radius,
                 color: neonColors[Math.floor(Math.random() * neonColors.length)],
                 phase: Math.random() * Math.PI * 2,
                 scoreValue: scoreValue,
@@ -1270,14 +1280,12 @@
         const dropDeathFood = (snake) => {
             if (!snake || !snake.history || snake.score <= 0) return;
 
-            // Cobra larga apenas 20% a 23% da sua massa (Igual ao jogo original)
             const dropPercentage = GAME_CONFIG.DEATH_DROP_PERCENTAGE + (Math.random() * 0.03);
             const totalDropScore = snake.score * dropPercentage;
 
             const spacing = snake.historySpacing || GAME_CONFIG.SNAKE_HISTORY_SPACING;
             const segments = Math.min(Math.floor(snake.length), Math.floor((snake.history.length || 0) / spacing));
 
-            // 2 a 3 orbes por segmento corporal
             const numFoods = Math.max(1, segments * 2);
             const scorePerFood = totalDropScore / numFoods;
 
@@ -1307,7 +1315,6 @@
         window.addEventListener('mousedown', () => { if (!isTouch) isMouseDown = true; });
         window.addEventListener('mouseup', () => { if (!isTouch) isMouseDown = false; });
 
-        // MODS DE TECLADO / SCROLL (Apenas PC)
         window.addEventListener('wheel', (e) => {
             if (gameState === 'PLAYING' && currentDevice === 'PC') {
                 if (e.deltaY > 0) manualZoomMultiplier *= 0.9;
@@ -1393,18 +1400,14 @@
 
             const lerpFactor = Math.min(1, 0.2 * dt);
 
-            // DINÂMICA DA COMIDA (Crescimento e Fuga)
             for (let i = foods.length - 1; i >= 0; i--) {
                 let f = foods[i];
-
-                // Comida Normal cresce até atingir o seu tamanho alvo
                 if (f.type === 'NORMAL' && f.radius < f.targetRadius) {
                     f.radius += GAME_CONFIG.FOOD_GROWTH_RATE * dt;
                     f.scoreValue += (GAME_CONFIG.FOOD_GROWTH_RATE * 2) * dt;
                     f.growthValue = f.scoreValue * (GAME_CONFIG.GROWTH_PER_FOOD / GAME_CONFIG.SCORE_PER_FOOD);
                 }
 
-                // Vagalumes (Fireflies) movem-se e fogem
                 if (f.type === 'FIREFLY') {
                     if (!player.isDead) {
                         let dToPlayer = Math.hypot(player.x - f.x, player.y - f.y);
@@ -1485,10 +1488,6 @@
 
                 } else if (ent.targetX !== undefined) {
 
-                    // NOVA MECÂNICA ANTI-GHOSTING / ANTI-ATRAVESSAMENTO:
-                    // Se o cliente detetar que o bot nos bateu, paramos o movimento visual dele
-                    // enquanto esperamos que o servidor confirme a morte. Isto impede que ele 
-                    // atravesse fisicamente o nosso corpo no ecrã devido ao lag da internet!
                     let isCrashingLocally = false;
                     if (!player.isDead && checkPerfectCollision(ent.x, ent.y, ent.radius, ent.angle, player)) {
                         isCrashingLocally = true;
@@ -1537,7 +1536,6 @@
             const isBoosting = isMouseDown && player.length >= GAME_CONFIG.BOOST_MIN_LENGTH;
             let camTargetX = camera.x, camTargetY = camera.y;
 
-            // --- LÓGICA DO JOGADOR E CÂMERA MODDED ---
             if (!player.isDead) {
                 player.radius = getEntityRadius(player.length);
 
@@ -1647,7 +1645,6 @@
                     } else if (d < magnet) { f.x += (player.x - f.x) * GAME_CONFIG.MAGNET_STRENGTH; f.y += (player.y - f.y) * GAME_CONFIG.MAGNET_STRENGTH; }
                 }
 
-                // O envio para o servidor é agora mais rápido (25ms) para desenhar as curvas da nossa cobra perfeitamente!
                 if (!isOfflineMode && Date.now() - lastUpdateTime > 25) {
                     lastUpdateTime = Date.now();
                     socket.emit('update', { x: player.x, y: player.y, angle: player.angle, score: player.score, length: player.length, radius: player.radius, isBoosting: isBoosting });
@@ -1681,6 +1678,7 @@
             ` : '');
         }
 
+        // --- SISTEMA DE RENDERIZAÇÃO DA COBRA (AAA) ---
         function drawSnake(context, entity, activeSkin, isBoosting, customSpacing) {
             if (!activeSkin || !activeSkin.getBodyColor) activeSkin = skins[0];
             if (entity.isDead) return;
@@ -1698,9 +1696,77 @@
             if (camera.zoom < 0.6) lodMult = 2;
             if (camera.zoom < 0.35) lodMult = 3;
 
-            context.save(); context.lineCap = 'round'; context.lineJoin = 'round';
+            context.save();
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+
             if (isHigh && isBoosting) { context.shadowBlur = 10; context.shadowColor = activeSkin.getBodyColor(false, 0, segments)[0]; }
 
+            // --- 1. RENDERIZAR PERNAS DE LACRAIA (Se for centopeia) ---
+            if (activeSkin.isCentipede && availableSegments > 2) {
+                context.save();
+                context.lineWidth = radius * 0.6;
+                context.strokeStyle = activeSkin.legColor || '#000';
+                if (isHigh) {
+                    context.shadowColor = 'rgba(0,0,0,0.6)';
+                    context.shadowBlur = 4;
+                    context.shadowOffsetY = 2;
+                }
+                for (let i = 1; i < availableSegments; i += 2) { // Pernas mais espaçadas
+                    const p1 = entity.history[i * spacing];
+                    const p2 = entity.history[(i - 1) * spacing];
+                    if (!p1 || !p2) continue;
+
+                    const segAngle = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+                    const legLen = radius * 1.8;
+                    const legAnim = Math.sin((entity.distAccum || 0) * 0.15 + i) * 0.5; // Animação de rastejar
+
+                    // Perna Esquerda
+                    context.beginPath();
+                    context.moveTo(p1.x, p1.y);
+                    context.lineTo(p1.x + Math.cos(segAngle - 1.3 + legAnim) * legLen, p1.y + Math.sin(segAngle - 1.3 + legAnim) * legLen);
+                    context.stroke();
+
+                    // Perna Direita
+                    context.beginPath();
+                    context.moveTo(p1.x, p1.y);
+                    context.lineTo(p1.x + Math.cos(segAngle + 1.3 - legAnim) * legLen, p1.y + Math.sin(segAngle + 1.3 - legAnim) * legLen);
+                    context.stroke();
+                }
+                context.restore();
+            }
+
+            // --- 2. RENDERIZAR ASAS (Se tiver asas) ---
+            if (activeSkin.hasWings && availableSegments >= 3) {
+                const neckIdx = Math.min(availableSegments - 1, 3);
+                const neckPos = entity.history[neckIdx * spacing] || { x: entity.x, y: entity.y };
+                const wingAng = entity.angle;
+                const flapAnim = Math.sin((entity.distAccum || 0) * 0.08) * 0.5; // Animação de bater asas
+
+                const drawWing = (side) => {
+                    context.save();
+                    context.translate(neckPos.x, neckPos.y);
+                    context.rotate(wingAng);
+                    context.scale(1, side * (1 - Math.abs(flapAnim) * 0.5)); // Efeito de bater asas
+
+                    context.fillStyle = activeSkin.wingColor || '#fff';
+                    context.strokeStyle = 'rgba(0,0,0,0.5)';
+                    context.lineWidth = 2;
+
+                    context.beginPath();
+                    context.moveTo(0, 0);
+                    // Curva de asa estilo Dragão/Anjo
+                    context.bezierCurveTo(-radius, radius * 3, -radius * 5, radius * 4, -radius * 2, radius * 0.5);
+                    context.bezierCurveTo(-radius * 1.5, radius * 0.2, -radius * 0.5, radius * 0.5, 0, 0);
+                    context.fill();
+                    context.stroke();
+                    context.restore();
+                };
+                drawWing(1); // Asa Direita
+                drawWing(-1); // Asa Esquerda
+            }
+
+            // --- 3. CORPO PRINCIPAL (Borda negra e Gomos coloridos) ---
             context.lineWidth = (radius * 2) + 4;
             context.strokeStyle = '#000000';
             context.beginPath(); context.moveTo(entity.x, entity.y);
@@ -1708,18 +1774,22 @@
                 const pos = entity.history[i * spacing];
                 if (pos) context.lineTo(pos.x, pos.y);
             }
-            context.stroke(); context.restore();
+            context.stroke();
 
             for (let i = availableSegments - 1; i >= 0; i -= lodMult) {
                 const pos = i === 0 ? { x: entity.x, y: entity.y } : entity.history[i * spacing];
                 if (!pos || isNaN(pos.x)) continue;
                 let isDark = Math.floor(i / 4) % 2 === 0;
+
+                // Mapeamento dinâmico de cor (Permite listras precisas como Bandeiras)
                 const baseColors = activeSkin.getBodyColor(isDark, i, availableSegments);
                 let c = activeSkin.getTailColor && activeSkin.getTailColor(availableSegments - i) ? activeSkin.getTailColor(availableSegments - i) : { c1: baseColors[0], c2: baseColors[1] };
+
                 context.fillStyle = c.c1 || '#fff';
                 context.beginPath(); context.arc(pos.x, pos.y, radius, 0, Math.PI * 2); context.fill();
             }
 
+            // Brilho tridimensional (Gloss) do corpo
             if (isHigh) {
                 context.save(); context.lineCap = 'round'; context.lineJoin = 'round';
                 context.lineWidth = radius * 0.8; context.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -1733,16 +1803,16 @@
                 context.stroke(); context.restore();
             }
 
-            if (activeSkin.isCyclops) {
+            // --- 4. OLHOS (Ciclopes vs Normais) ---
+            if (activeSkin.eyes === 1) {
+                // Modelo: Ciclope (1 Olho)
                 const distOffset = 0.4;
                 const ex = entity.x + Math.cos(entity.angle) * radius * distOffset;
                 const ey = entity.y + Math.sin(entity.angle) * radius * distOffset;
                 const eR = radius * 0.65;
 
-                context.fillStyle = '#000';
-                context.beginPath(); context.arc(ex, ey, eR + 1.5, 0, Math.PI * 2); context.fill();
-                context.fillStyle = '#fff';
-                context.beginPath(); context.arc(ex, ey, eR, 0, Math.PI * 2); context.fill();
+                context.fillStyle = '#000'; context.beginPath(); context.arc(ex, ey, eR + 1.5, 0, Math.PI * 2); context.fill();
+                context.fillStyle = '#fff'; context.beginPath(); context.arc(ex, ey, eR, 0, Math.PI * 2); context.fill();
 
                 const pR = eR * 0.5;
                 const px = ex + Math.cos(entity.angle) * pR * 0.3;
@@ -1755,14 +1825,13 @@
                     context.beginPath(); context.arc(px - pR * 0.3, py - pR * 0.3, pR * 0.3, 0, Math.PI * 2); context.fill();
                 }
             } else {
+                // Modelo: Clássico (2 Olhos)
                 [entity.angle - 0.7, entity.angle + 0.7].forEach(a => {
                     const distOffset = 0.6;
                     const ex = entity.x + Math.cos(a) * radius * distOffset, ey = entity.y + Math.sin(a) * radius * distOffset;
                     const eR = radius * 0.42;
 
-                    context.fillStyle = '#000';
-                    context.beginPath(); context.arc(ex, ey, eR + 1.5, 0, Math.PI * 2); context.fill();
-
+                    context.fillStyle = '#000'; context.beginPath(); context.arc(ex, ey, eR + 1.5, 0, Math.PI * 2); context.fill();
                     context.fillStyle = '#fff'; context.beginPath(); context.arc(ex, ey, eR, 0, Math.PI * 2); context.fill();
 
                     const pR = eR * 0.55, px = ex + Math.cos(entity.angle) * pR * 0.4, py = ey + Math.sin(entity.angle) * pR * 0.4;
@@ -1774,6 +1843,7 @@
                 });
             }
 
+            // --- 5. COROA (Se for o Top 1) ---
             if (entity.isTop1) {
                 context.save(); context.translate(entity.x, entity.y); context.rotate(entity.angle);
                 context.fillStyle = '#ffdd00'; context.shadowBlur = isHigh ? 10 : 0; context.shadowColor = '#ffaa00';
@@ -1784,6 +1854,7 @@
                 context.lineTo(-cr * 0.1, cr * 0.5); context.quadraticCurveTo(cr * 0.2, 0, -cr * 0.1, -cr * 0.5);
                 context.fill(); context.stroke(); context.restore();
             }
+            context.restore();
         }
 
         // --- DRAW LOOP (RENDERIZAÇÃO) ---
