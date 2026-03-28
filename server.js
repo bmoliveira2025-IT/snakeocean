@@ -37,7 +37,9 @@ const GAME_CONFIG = {
     SNAKE_MAX_RADIUS: 38,
     SNAKE_HISTORY_STEP: 1,
     SNAKE_HISTORY_SPACING: 5,
-    SNAKE_BASE_SPEED: 4.0,
+    SNAKE_BASE_SPEED_MOBILE: 3.2,
+    SNAKE_BASE_SPEED_TABLET: 3.6,
+    SNAKE_BASE_SPEED_PC: 4.0,
 
     SNAKE_HITBOX_SIZE: 0.80,    // Aumentado (0.80) para impedir fisicamente atravessamentos (Paridade v2.2)
     SNAKE_TURN_SPEED: 0.035,
@@ -206,7 +208,7 @@ function createBot() {
         x: pos.x, y: pos.y, angle: Math.random() * Math.PI * 2, targetAngle: Math.random() * Math.PI * 2,
         score: initialScore, length: initialLength, radius: initialRadius,
         history: Array.from({ length: Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(initialLength * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 10) }, () => ({ x: pos.x, y: pos.y })),
-        skinIndex: Math.floor(Math.random() * 15), aiTimer: 0, aiState: 'WANDER', speed: GAME_CONFIG.SNAKE_BASE_SPEED, isDead: false, distAccum: 0
+        skinIndex: Math.floor(Math.random() * 15), aiTimer: 0, aiState: 'WANDER', speed: GAME_CONFIG.SNAKE_BASE_SPEED_PC, isDead: false, distAccum: 0
     };
 }
 
@@ -384,7 +386,7 @@ setInterval(() => {
         while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2;
         bot.angle += diff * 0.1 * SERVER_DT;
 
-        const moveSpeed = (bot.isBoosting ? GAME_CONFIG.SNAKE_BASE_SPEED * GAME_CONFIG.BOOST_SPEED_MULT : GAME_CONFIG.SNAKE_BASE_SPEED) * SERVER_DT;
+        const moveSpeed = (bot.isBoosting ? bot.speed * GAME_CONFIG.BOOST_SPEED_MULT : bot.speed) * SERVER_DT;
         bot.x += Math.cos(bot.angle) * moveSpeed;
         bot.y += Math.sin(bot.angle) * moveSpeed;
 
@@ -466,9 +468,14 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 io.on('connection', (socket) => {
     socket.on('join', (data) => {
         const pos = getSafePosition();
+        const device = data.device || 'PC';
+        let baseSpeed = GAME_CONFIG.SNAKE_BASE_SPEED_PC;
+        if (device === 'MOBILE') baseSpeed = GAME_CONFIG.SNAKE_BASE_SPEED_MOBILE;
+        else if (device === 'TABLET') baseSpeed = GAME_CONFIG.SNAKE_BASE_SPEED_TABLET;
+
         players[socket.id] = {
             id: socket.id, name: data.name || 'Convidado',
-            x: pos.x, y: pos.y, angle: 0, score: 0,
+            x: pos.x, y: pos.y, angle: 0, speed: baseSpeed,
             length: GAME_CONFIG.SNAKE_INITIAL_LENGTH, radius: GAME_CONFIG.SNAKE_INITIAL_RADIUS,
             history: Array.from({ length: Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor(GAME_CONFIG.SNAKE_INITIAL_LENGTH * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 10) }, () => ({ x: pos.x, y: pos.y })),
             skinIndex: data.skinIndex || 0, isDead: false

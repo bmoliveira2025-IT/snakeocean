@@ -806,8 +806,8 @@
         // --- BLOCO DE CONFIGURAÇÃO DO JOGO (MASTER CONFIG) ---
         // =============================================================
         const GAME_CONFIG = {
-            WORLD_SIZE: 6000, // Tamanho inicial agora é dinâmico (começa mais pequeno para ação imediata)
-            TOTAL_FOOD: 1200, // Dinâmico com o tamanho do mapa
+            WORLD_SIZE: 6000,
+            TOTAL_FOOD: 1200,
 
             SNAKE_INITIAL_LENGTH: 30,
             SNAKE_INITIAL_RADIUS_MOBILE: 12,
@@ -825,12 +825,20 @@
 
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
-            SNAKE_BASE_SPEED: 4.0,
+
+            SNAKE_BASE_SPEED_MOBILE: 3.2, // Velocidade inicial ligeiramente mais lenta para mobile
+            SNAKE_BASE_SPEED_TABLET: 3.6,
+            SNAKE_BASE_SPEED_PC: 4.0,
+            get SNAKE_BASE_SPEED() {
+                if (currentDevice === 'PC') return this.SNAKE_BASE_SPEED_PC;
+                if (currentDevice === 'TABLET') return this.SNAKE_BASE_SPEED_TABLET;
+                return this.SNAKE_BASE_SPEED_MOBILE;
+            },
+
             SNAKE_HITBOX_SIZE: 0.80,
             SNAKE_TURN_SPEED: 0.035,
             SNAKE_TURN_SPEED_BOOST: 0.015,
 
-            // CRESCIMENTO REDUZIDO (Para exigir mais tempo a ficar gigante, já que a comida está mais bem espalhada)
             GROWTH_PER_FOOD: 0.8,
             SCORE_PER_FOOD: 5,
             DEATH_GROWTH: 3.2,
@@ -854,7 +862,7 @@
             FIREFLY_SPAWN_CHANCE: 0.02,
             FIREFLY_SCORE: 75,
             FIREFLY_SPEED: 2.2,
-            DEATH_FOOD_RADIUS: 6.0,     // Aumentado o tamanho da comida base para ser mais vistosa
+            DEATH_FOOD_RADIUS: 6.0,
             DEATH_DROP_PERCENTAGE: 0.22,
         };
 
@@ -1092,7 +1100,7 @@
             foods.length = 0; if (data.foods) foods.push(...data.foods);
             if (data.config) {
                 Object.keys(data.config).forEach(k => {
-                    if (k !== 'SNAKE_INITIAL_RADIUS') GAME_CONFIG[k] = data.config[k];
+                    if (k !== 'SNAKE_INITIAL_RADIUS' && k !== 'SNAKE_BASE_SPEED') GAME_CONFIG[k] = data.config[k];
                 });
                 CENTER = GAME_CONFIG.WORLD_SIZE / 2;
             }
@@ -1868,7 +1876,7 @@
             if (camera.zoom < 0.35) bgLod = 3;
 
             let baseHexR = 40;
-            if (currentDevice === 'MOBILE') baseHexR = 22; // Mais pequeno para telemóveis
+            if (currentDevice === 'MOBILE') baseHexR = 15; // Ainda mais pequeno para telemóveis (diminuído)
             else if (currentDevice === 'TABLET') baseHexR = 30;
 
             const r = baseHexR * bgLod;
