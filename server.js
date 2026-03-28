@@ -39,7 +39,7 @@ const GAME_CONFIG = {
     SNAKE_HISTORY_SPACING: 5,
     SNAKE_BASE_SPEED: 4.0,
 
-    SNAKE_HITBOX_SIZE: 0.65,
+    SNAKE_HITBOX_SIZE: 0.80,    // Aumentado (0.80) para impedir fisicamente atravessamentos (Paridade v2.2)
     SNAKE_TURN_SPEED: 0.035,
     SNAKE_TURN_SPEED_BOOST: 0.015,
 

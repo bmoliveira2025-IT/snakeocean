@@ -807,7 +807,7 @@
         // =============================================================
         const GAME_CONFIG = {
             WORLD_SIZE: 9000,
-            TOTAL_FOOD: 2000, // Aumentado um pouco para manter a abundância
+            TOTAL_FOOD: 2000,
 
             SNAKE_INITIAL_LENGTH: 30,
             SNAKE_INITIAL_RADIUS_MOBILE: 12,
@@ -826,7 +826,7 @@
             SNAKE_HISTORY_STEP: 1,
             SNAKE_HISTORY_SPACING: 5,
             SNAKE_BASE_SPEED: 4.0,
-            SNAKE_HITBOX_SIZE: 0.65,
+            SNAKE_HITBOX_SIZE: 0.80,    // Aumentado (0.80) para impedir fisicamente atravessamentos
             SNAKE_TURN_SPEED: 0.035,
             SNAKE_TURN_SPEED_BOOST: 0.015,
 
@@ -849,13 +849,12 @@
             ZOOM_SHRINK_RATE: 0.015,
             CAMERA_LOOK_AHEAD: 2.5,
 
-            // NOVAS CONFIGURAÇÕES DE ECOSSISTEMA DE COMIDA
-            FOOD_GROWTH_RATE: 0.04,         // Velocidade de crescimento das bolinhas normais
-            FIREFLY_SPAWN_CHANCE: 0.02,     // 2% de chance de nascer uma presa móvel (Vagalume)
-            FIREFLY_SCORE: 75,              // Pontos concedidos pelo vagalume (50 a 100)
-            FIREFLY_SPEED: 2.2,             // Velocidade de fuga da presa
-            DEATH_FOOD_RADIUS: 5.0,         // Tamanho maior para restos mortais
-            DEATH_DROP_PERCENTAGE: 0.22,    // Cobra deixa cair ~22% da sua massa total
+            FOOD_GROWTH_RATE: 0.04,
+            FIREFLY_SPAWN_CHANCE: 0.02,
+            FIREFLY_SCORE: 75,
+            FIREFLY_SPEED: 2.2,
+            DEATH_FOOD_RADIUS: 5.0,
+            DEATH_DROP_PERCENTAGE: 0.22,
         };
 
         let CENTER = GAME_CONFIG.WORLD_SIZE / 2;
@@ -1485,35 +1484,47 @@
                     if (ent.history.length > targetLen) ent.history.length = targetLen;
 
                 } else if (ent.targetX !== undefined) {
-                    const moveSpeed = ent.isBoosting ? GAME_CONFIG.SNAKE_BASE_SPEED * GAME_CONFIG.BOOST_SPEED_MULT : GAME_CONFIG.SNAKE_BASE_SPEED;
-                    ent.targetX += Math.cos(ent.targetAngle) * moveSpeed * dt;
-                    ent.targetY += Math.sin(ent.targetAngle) * moveSpeed * dt;
 
-                    const distToTarget = Math.hypot(ent.targetX - ent.x, ent.targetY - ent.y);
-                    if (distToTarget > 100) {
-                        const dx = ent.targetX - ent.x, dy = ent.targetY - ent.y;
-                        ent.x = ent.targetX; ent.y = ent.targetY; ent.angle = ent.targetAngle;
-                        for (let i = 0; i < (ent.history?.length || 0); i++) { ent.history[i].x += dx; ent.history[i].y += dy; }
-                        ent.lastX = ent.x; ent.lastY = ent.y; ent.distAccum = 0;
-                    } else {
-                        ent.x += (ent.targetX - ent.x) * lerpFactor; ent.y += (ent.targetY - ent.y) * lerpFactor;
-                        let aDiff = ent.targetAngle - ent.angle;
-                        while (aDiff < -Math.PI) aDiff += Math.PI * 2; while (aDiff > Math.PI) aDiff -= Math.PI * 2;
-                        ent.angle += aDiff * lerpFactor;
+                    // NOVA MECÂNICA ANTI-GHOSTING / ANTI-ATRAVESSAMENTO:
+                    // Se o cliente detetar que o bot nos bateu, paramos o movimento visual dele
+                    // enquanto esperamos que o servidor confirme a morte. Isto impede que ele 
+                    // atravesse fisicamente o nosso corpo no ecrã devido ao lag da internet!
+                    let isCrashingLocally = false;
+                    if (!player.isDead && checkPerfectCollision(ent.x, ent.y, ent.radius, ent.angle, player)) {
+                        isCrashingLocally = true;
+                    }
 
-                        if (!ent.lastX) { ent.lastX = ent.x; ent.lastY = ent.y; }
-                        const distMoved = Math.hypot(ent.x - ent.lastX, ent.y - ent.lastY);
+                    if (!isCrashingLocally) {
+                        const moveSpeed = ent.isBoosting ? GAME_CONFIG.SNAKE_BASE_SPEED * GAME_CONFIG.BOOST_SPEED_MULT : GAME_CONFIG.SNAKE_BASE_SPEED;
+                        ent.targetX += Math.cos(ent.targetAngle) * moveSpeed * dt;
+                        ent.targetY += Math.sin(ent.targetAngle) * moveSpeed * dt;
 
-                        ent.distAccum = (ent.distAccum || 0) + distMoved;
-                        if (distMoved > 0.001) {
-                            const vx = Math.cos(ent.angle), vy = Math.sin(ent.angle);
-                            while (ent.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
-                                ent.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
-                                ent.history.unshift({ x: ent.x - vx * ent.distAccum, y: ent.y - vy * ent.distAccum });
+                        const distToTarget = Math.hypot(ent.targetX - ent.x, ent.targetY - ent.y);
+                        if (distToTarget > 100) {
+                            const dx = ent.targetX - ent.x, dy = ent.targetY - ent.y;
+                            ent.x = ent.targetX; ent.y = ent.targetY; ent.angle = ent.targetAngle;
+                            for (let i = 0; i < (ent.history?.length || 0); i++) { ent.history[i].x += dx; ent.history[i].y += dy; }
+                            ent.lastX = ent.x; ent.lastY = ent.y; ent.distAccum = 0;
+                        } else {
+                            ent.x += (ent.targetX - ent.x) * lerpFactor; ent.y += (ent.targetY - ent.y) * lerpFactor;
+                            let aDiff = ent.targetAngle - ent.angle;
+                            while (aDiff < -Math.PI) aDiff += Math.PI * 2; while (aDiff > Math.PI) aDiff -= Math.PI * 2;
+                            ent.angle += aDiff * lerpFactor;
+
+                            if (!ent.lastX) { ent.lastX = ent.x; ent.lastY = ent.y; }
+                            const distMoved = Math.hypot(ent.x - ent.lastX, ent.y - ent.lastY);
+
+                            ent.distAccum = (ent.distAccum || 0) + distMoved;
+                            if (distMoved > 0.001) {
+                                const vx = Math.cos(ent.angle), vy = Math.sin(ent.angle);
+                                while (ent.distAccum >= GAME_CONFIG.SNAKE_HISTORY_STEP) {
+                                    ent.distAccum -= GAME_CONFIG.SNAKE_HISTORY_STEP;
+                                    ent.history.unshift({ x: ent.x - vx * ent.distAccum, y: ent.y - vy * ent.distAccum });
+                                }
+                                const targetLen = Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor((ent.length || GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1);
+                                if (ent.history.length > targetLen) ent.history.length = targetLen;
+                                ent.lastX = ent.x; ent.lastY = ent.y;
                             }
-                            const targetLen = Math.min(GAME_CONFIG.MAX_HISTORY_LENGTH, Math.floor((ent.length || GAME_CONFIG.SNAKE_INITIAL_LENGTH) * GAME_CONFIG.SNAKE_HISTORY_SPACING) + 1);
-                            if (ent.history.length > targetLen) ent.history.length = targetLen;
-                            ent.lastX = ent.x; ent.lastY = ent.y;
                         }
                     }
                 }
@@ -1636,7 +1647,8 @@
                     } else if (d < magnet) { f.x += (player.x - f.x) * GAME_CONFIG.MAGNET_STRENGTH; f.y += (player.y - f.y) * GAME_CONFIG.MAGNET_STRENGTH; }
                 }
 
-                if (!isOfflineMode && Date.now() - lastUpdateTime > 50) {
+                // O envio para o servidor é agora mais rápido (25ms) para desenhar as curvas da nossa cobra perfeitamente!
+                if (!isOfflineMode && Date.now() - lastUpdateTime > 25) {
                     lastUpdateTime = Date.now();
                     socket.emit('update', { x: player.x, y: player.y, angle: player.angle, score: player.score, length: player.length, radius: player.radius, isBoosting: isBoosting });
                 }
